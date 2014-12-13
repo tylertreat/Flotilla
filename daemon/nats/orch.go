@@ -1,4 +1,4 @@
-package mq
+package nats
 
 import (
 	"fmt"
@@ -8,11 +8,11 @@ import (
 
 const gnatsd = "apcera/gnatsd"
 
-type natsBroker struct {
+type NATSBroker struct {
 	containerID string
 }
 
-func (n *natsBroker) start(port string) error {
+func (n *NATSBroker) Start(port string) error {
 	containerID, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker run -d -p %s:4222 %s", port, gnatsd)).Output()
 	if err != nil {
@@ -25,7 +25,7 @@ func (n *natsBroker) start(port string) error {
 	return nil
 }
 
-func (n *natsBroker) stop() error {
+func (n *NATSBroker) Stop() error {
 	_, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker kill %s", n.containerID)).Output()
 	if err != nil {

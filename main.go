@@ -4,42 +4,20 @@ import (
 	"flag"
 
 	"github.com/tylertreat/flotillad/daemon"
-	"github.com/tylertreat/flotillad/daemon/mq"
-	"github.com/tylertreat/flotillad/daemon/peer"
 )
 
-const (
-	mqMode      = "mq"
-	peerMode    = "peer"
-	defaultPort = 9000
-)
+const defaultPort = 9000
 
 func main() {
-	var (
-		mode = flag.String("mode", mqMode, "[mq|peer]")
-		port = flag.Int("port", defaultPort, "daemon port")
-	)
+	port := flag.Int("port", defaultPort, "daemon port")
 	flag.Parse()
 
-	if *mode != mqMode && *mode != peerMode {
-		panic("mode must be [mq|peer]")
+	d, err := daemon.NewDaemon()
+	if err != nil {
+		panic(err)
 	}
 
-	var daemon daemon.Daemon
-	switch *mode {
-	case mqMode:
-		if d, err := mq.NewDaemon(); err != nil {
-			panic(err)
-		} else {
-			daemon = d
-		}
-	case peerMode:
-		if d, err := peer.NewDaemon(); err != nil {
-			panic(err)
-		} else {
-			daemon = d
-		}
+	if err := d.Start(*port); err != nil {
+		panic(err)
 	}
-
-	daemon.Start(*port)
 }

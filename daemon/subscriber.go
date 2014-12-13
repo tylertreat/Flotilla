@@ -1,4 +1,4 @@
-package peer
+package daemon
 
 import (
 	"encoding/binary"
@@ -34,7 +34,7 @@ func (s *subscriber) start() {
 
 func (s *subscriber) testThroughput() {
 	for {
-		s.recv()
+		s.Recv()
 
 		if !s.hasStarted {
 			s.hasStarted = true
@@ -56,7 +56,7 @@ func (s *subscriber) testThroughput() {
 func (s *subscriber) testLatency() {
 	latencies := hdrhistogram.New(0, 60000, 32)
 	for {
-		message := s.recv()
+		message := s.Recv()
 		now := time.Now().UnixNano()
 		then, _ := binary.Varint(message)
 

@@ -1,4 +1,4 @@
-package peer
+package daemon
 
 import (
 	"encoding/binary"
@@ -30,7 +30,7 @@ func (p *publisher) testThroughput() {
 	message := make([]byte, p.messageSize)
 	start := time.Now().UnixNano()
 	for i := 0; i < p.numMessages; i++ {
-		p.send(message)
+		p.Send(message)
 	}
 	stop := time.Now().UnixNano()
 	ms := float32(stop-start) / 1000000
@@ -43,7 +43,7 @@ func (p *publisher) testLatency() {
 	start := time.Now().UnixNano()
 	for i := 0; i < p.numMessages; i++ {
 		binary.PutVarint(message, time.Now().UnixNano())
-		p.send(message)
+		p.Send(message)
 	}
 	stop := time.Now().UnixNano()
 	ms := float32(stop-start) / 1000000

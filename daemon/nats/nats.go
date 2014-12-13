@@ -1,4 +1,4 @@
-package peer
+package nats
 
 import (
 	"fmt"
@@ -8,12 +8,12 @@ import (
 
 const subject = "test"
 
-type natsPeer struct {
+type NATSPeer struct {
 	*nats.Conn
 	messages chan []byte
 }
 
-func newNATS(host string) (*natsPeer, error) {
+func NewNATS(host string) (*NATSPeer, error) {
 	conn, err := nats.Connect(fmt.Sprintf("nats://%s", host))
 	if err != nil {
 		return nil, err
@@ -25,13 +25,13 @@ func newNATS(host string) (*natsPeer, error) {
 		messages <- message.Data
 	})
 
-	return &natsPeer{conn, messages}, nil
+	return &NATSPeer{conn, messages}, nil
 }
 
-func (n *natsPeer) recv() []byte {
+func (n *NATSPeer) Recv() []byte {
 	return <-n.messages
 }
 
-func (n *natsPeer) send(message []byte) {
+func (n *NATSPeer) Send(message []byte) {
 	n.Publish(subject, message)
 }
