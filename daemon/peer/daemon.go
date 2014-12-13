@@ -8,6 +8,7 @@ import (
 	"github.com/gdamore/mangos"
 	"github.com/gdamore/mangos/protocol/rep"
 	"github.com/gdamore/mangos/transport/tcp"
+	"github.com/tylertreat/flotillad/daemon/mq"
 )
 
 type operation string
@@ -21,12 +22,19 @@ const (
 	throughput test      = "throughput"
 )
 
+type peer interface {
+	recv() []byte
+	send([]byte)
+}
+
 type request struct {
 	Operation   operation `json:"operation"`
 	NumMessages int       `json:"num_messages"`
 	MessageSize int64     `json:"message_size"`
 	Test        test      `json:"test"`
 	Count       int       `json:"count"`
+	Broker      string    `json:"broker"`
+	Host        string    `json:"host"`
 }
 
 type response struct {
@@ -34,14 +42,11 @@ type response struct {
 	Message string `json:"message"`
 }
 
-func (r request) isValid() bool {
-	return r.Operation == sub || r.Operation == pub || r.Operation == start
-}
-
 // Daemon is an implementation of the Daemon interface which is responsible for
 // orchestrating broker publishers and subscribers on the host machine.
 type Daemon struct {
 	mangos.Socket
+	publishers []*publisher
 }
 
 // NewDaemon creates and returns a new peer Daemon. An error is returned if
@@ -52,7 +57,7 @@ func NewDaemon() (*Daemon, error) {
 		return nil, err
 	}
 	rep.AddTransport(tcp.NewTransport())
-	return &Daemon{rep}, nil
+	return &Daemon{rep, []*publisher{}}, nil
 }
 
 // Start will start the Daemon on the given port so that it can begin
@@ -83,16 +88,7 @@ func (d *Daemon) loop() error {
 			continue
 		}
 
-		if !req.isValid() {
-			log.Println("Invalid operation:", req.Operation)
-			d.sendResponse(response{
-				Success: false,
-				Message: fmt.Sprintf("Invalid operation: %s", req.Operation),
-			})
-			continue
-		}
-
-		if err := processRequest(req); err != nil {
+		if err := d.processRequest(req); err != nil {
 			d.sendResponse(response{
 				Success: false,
 				Message: err.Error(),
@@ -119,7 +115,83 @@ func (d *Daemon) sendResponse(rep response) {
 	}
 }
 
-func processRequest(req request) error {
-	fmt.Println(req.Operation)
+func (d *Daemon) processRequest(req request) error {
+	switch req.Operation {
+	case pub:
+		return d.processPub(req.Broker, req.Host, req.Count, req.NumMessages,
+			req.MessageSize, req.Test)
+	case sub:
+		return d.processSub(req.Broker, req.Host, req.Count, req.NumMessages,
+			req.MessageSize, req.Test)
+	case start:
+		return d.processStart()
+	default:
+		return fmt.Errorf("Invalid operation %s", req.Operation)
+	}
+}
+
+func (d *Daemon) processPub(broker, host string, count, numMessages int,
+	messageSize int64, test test) error {
+
+	for i := 0; i < count; i++ {
+		sender, err := newPeer(broker, host)
+		if err != nil {
+			return err
+		}
+
+		d.publishers = append(d.publishers, &publisher{
+			peer:        sender,
+			id:          i,
+			numMessages: numMessages,
+			messageSize: messageSize,
+			test:        test,
+		})
+	}
+
 	return nil
+}
+
+func (d *Daemon) processSub(broker, host string, count, numMessages int,
+	messageSize int64, test test) error {
+
+	for i := 0; i < count; i++ {
+		receiver, err := newPeer(broker, host)
+		if err != nil {
+			return err
+		}
+
+		complete := make(chan bool)
+		go func(c chan bool) {
+			(&subscriber{
+				peer:        receiver,
+				id:          i,
+				numMessages: numMessages,
+				messageSize: messageSize,
+				test:        test,
+				complete:    complete,
+			}).start()
+		}(complete)
+
+		// TODO: collect results and send them back.
+	}
+
+	return nil
+}
+
+func (d *Daemon) processStart() error {
+	for _, publisher := range d.publishers {
+		go publisher.start()
+	}
+
+	// TODO collect results and send them back.
+	return nil
+}
+
+func newPeer(broker, host string) (peer, error) {
+	switch broker {
+	case mq.NATS:
+		return newNATS(host)
+	default:
+		return nil, fmt.Errorf("Invalid broker: %s", broker)
+	}
 }

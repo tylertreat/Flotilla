@@ -19,17 +19,13 @@ const (
 )
 
 const (
-	nats = "nats"
+	NATS = "nats"
 )
 
 type request struct {
 	Operation operation `json:"operation"`
 	Broker    string    `json:"broker"`
 	Port      string    `json:"port"`
-}
-
-func (r request) isValid() bool {
-	return r.Operation == start || r.Operation == stop
 }
 
 type response struct {
@@ -89,15 +85,6 @@ func (d *Daemon) loop() error {
 			continue
 		}
 
-		if !req.isValid() {
-			log.Println("Invalid operation:", req.Operation)
-			d.sendResponse(response{
-				Success: false,
-				Message: fmt.Sprintf("Invalid operation: %s", req.Operation),
-			})
-			continue
-		}
-
 		if err := d.processRequest(req); err != nil {
 			d.sendResponse(response{
 				Success: false,
@@ -143,7 +130,7 @@ func (d *Daemon) processStart(broker, port string) error {
 	}
 
 	switch broker {
-	case nats:
+	case NATS:
 		d.broker = &natsBroker{}
 	default:
 		return fmt.Errorf("Invalid broker %s", broker)
