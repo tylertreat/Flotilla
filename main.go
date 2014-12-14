@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/tylertreat/flotillad/daemon"
 )
@@ -17,6 +18,7 @@ func main() {
 		panic(err)
 	}
 
+	fmt.Println("flotilla daemon started...")
 	if err := d.Start(*port); err != nil {
 		panic(err)
 	}

@@ -18,7 +18,17 @@ type subscriber struct {
 	started     int64
 	stopped     int64
 	counter     int
-	complete    chan<- bool
+	results     chan *result
+}
+
+type latencyResults struct {
+	Min    int64   `json:"min"`
+	Q1     int64   `json:"q1"`
+	Q2     int64   `json:"q2"`
+	Q3     int64   `json:"q3"`
+	Max    int64   `json:"max"`
+	Mean   float64 `json:"mean"`
+	StdDev float64 `json:"std_dev"`
 }
 
 func (s *subscriber) start() {
@@ -45,16 +55,17 @@ func (s *subscriber) testThroughput() {
 		if s.counter == s.numMessages {
 			s.stopped = time.Now().UnixNano()
 			ms := float32(s.stopped-s.started) / 1000000.0
-			fmt.Printf("Received %d messages in %f ms\n", s.numMessages, ms)
-			fmt.Printf("Received %f per second\n", 1000*float32(s.numMessages)/ms)
-			s.complete <- true
+			s.results <- &result{
+				Duration:   ms,
+				Throughput: 1000 * float32(s.numMessages) / ms,
+			}
 			return
 		}
 	}
 }
 
 func (s *subscriber) testLatency() {
-	latencies := hdrhistogram.New(0, 60000, 32)
+	latencies := hdrhistogram.New(0, 60000, 5)
 	for {
 		message := s.Recv()
 		now := time.Now().UnixNano()
@@ -64,15 +75,17 @@ func (s *subscriber) testLatency() {
 
 		s.counter++
 		if s.counter == s.numMessages {
-			fmt.Printf("Received %d messages\n", s.numMessages)
-			fmt.Printf("Min latency: %d ms\n", latencies.Min())
-			fmt.Printf("Q1 latency: %d ms\n", latencies.ValueAtQuantile(25))
-			fmt.Printf("Q2 latency: %d ms\n", latencies.ValueAtQuantile(50))
-			fmt.Printf("Q3 latency: %d ms\n", latencies.ValueAtQuantile(75))
-			fmt.Printf("Max latency: %d ms\n", latencies.Max())
-			fmt.Printf("Mean latency: %d ms\n", latencies.Mean())
-			fmt.Printf("Standard deviation: %d ms\n", latencies.StdDev())
-			s.complete <- true
+			s.results <- &result{
+				Latency: &latencyResults{
+					Min:    latencies.Min(),
+					Q1:     latencies.ValueAtQuantile(25),
+					Q2:     latencies.ValueAtQuantile(50),
+					Q3:     latencies.ValueAtQuantile(75),
+					Max:    latencies.Max(),
+					Mean:   latencies.Mean(),
+					StdDev: latencies.StdDev(),
+				},
+			}
 			return
 		}
 	}

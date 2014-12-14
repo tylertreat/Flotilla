@@ -3,7 +3,6 @@ package daemon
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"time"
 )
 
@@ -13,6 +12,7 @@ type publisher struct {
 	numMessages int
 	messageSize int64
 	test        test
+	results     chan *result
 }
 
 func (p *publisher) start() {
@@ -34,8 +34,10 @@ func (p *publisher) testThroughput() {
 	}
 	stop := time.Now().UnixNano()
 	ms := float32(stop-start) / 1000000
-	log.Printf("Sent %d messages in %f ms\n", p.numMessages, ms)
-	log.Printf("Sent %f per second\n", 1000*float32(p.numMessages)/ms)
+	p.results <- &result{
+		Duration:   ms,
+		Throughput: 1000 * float32(p.numMessages) / ms,
+	}
 }
 
 func (p *publisher) testLatency() {
@@ -47,6 +49,8 @@ func (p *publisher) testLatency() {
 	}
 	stop := time.Now().UnixNano()
 	ms := float32(stop-start) / 1000000
-	log.Printf("Sent %d messages in %f ms\n", p.numMessages, ms)
-	log.Printf("Sent %f per second\n", 1000*float32(p.numMessages)/ms)
+	p.results <- &result{
+		Duration:   ms,
+		Throughput: 1000 * float32(p.numMessages) / ms,
+	}
 }
