@@ -9,7 +9,7 @@ import (
 	"github.com/gdamore/mangos"
 	"github.com/gdamore/mangos/protocol/rep"
 	"github.com/gdamore/mangos/transport/tcp"
-	"github.com/tylertreat/flotillad/daemon/nats"
+	"github.com/tylertreat/flotilla/daemon/nats"
 )
 
 type daemon string
