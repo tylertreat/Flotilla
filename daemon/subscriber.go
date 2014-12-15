@@ -65,7 +65,7 @@ func (s *subscriber) testThroughput() {
 }
 
 func (s *subscriber) testLatency() {
-	latencies := hdrhistogram.New(0, 60000, 5)
+	latencies := hdrhistogram.New(0, 3600000, 5)
 	for {
 		message := s.Recv()
 		now := time.Now().UnixNano()
