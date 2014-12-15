@@ -6,7 +6,10 @@ import (
 	"os/exec"
 )
 
-const gnatsd = "apcera/gnatsd"
+const (
+	gnatsd       = "apcera/gnatsd"
+	internalPort = "4222"
+)
 
 type NATSBroker struct {
 	containerID string
@@ -14,7 +17,7 @@ type NATSBroker struct {
 
 func (n *NATSBroker) Start(port string) (interface{}, error) {
 	containerID, err := exec.Command("/bin/sh", "-c",
-		fmt.Sprintf("docker run -d -p %s:4222 %s", port, gnatsd)).Output()
+		fmt.Sprintf("docker run -d -p %s:%s %s", port, internalPort, gnatsd)).Output()
 	if err != nil {
 		log.Printf("Failed to start container %s: %s", gnatsd, err.Error())
 		return "", err

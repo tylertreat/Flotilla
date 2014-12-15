@@ -21,11 +21,11 @@ const (
 )
 
 type NATSPeer struct {
-	*nats.Conn
+	conn     *nats.Conn
 	messages chan []byte
 }
 
-func NewNATS(host string) (*NATSPeer, error) {
+func NewNATSPeer(host string) (*NATSPeer, error) {
 	conn, err := nats.Connect(fmt.Sprintf("nats://%s", host))
 	if err != nil {
 		return nil, err
@@ -35,24 +35,16 @@ func NewNATS(host string) (*NATSPeer, error) {
 	// Consumer.
 	conn.Opts.AllowReconnect = false
 
-	// Report async errors.
-	conn.Opts.AsyncErrorCB = func(nc *nats.Conn, sub *nats.Subscription, err error) {
-		panic(fmt.Sprintf("NATS: Received an async error! %v\n", err))
-	}
-
-	// Report a disconnect scenario.
-	conn.Opts.DisconnectedCB = func(nc *nats.Conn) {
-		fmt.Printf("Getting behind! %d\n", nc.OutMsgs-nc.InMsgs)
-		panic("NATS: Got disconnected!")
-	}
-
-	messages := make(chan []byte, 1000000)
-
-	conn.Subscribe(subject, func(message *nats.Msg) {
-		messages <- message.Data
-	})
+	messages := make(chan []byte, 100000)
 
 	return &NATSPeer{conn, messages}, nil
+}
+
+func (n *NATSPeer) Subscribe() error {
+	n.conn.Subscribe(subject, func(message *nats.Msg) {
+		n.messages <- message.Data
+	})
+	return nil
 }
 
 func (n *NATSPeer) Recv() []byte {
@@ -61,15 +53,19 @@ func (n *NATSPeer) Recv() []byte {
 
 func (n *NATSPeer) Send(message []byte) {
 	// Check if we are behind by >= 1MB bytes.
-	bytesDeltaOver := n.Conn.OutBytes-n.Conn.InBytes >= maxBytesBehind
+	bytesDeltaOver := n.conn.OutBytes-n.conn.InBytes >= maxBytesBehind
 
 	// Check if we are behind by >= 65k msgs.
-	msgsDeltaOver := n.Conn.OutMsgs-n.Conn.InMsgs >= maxMsgsBehind
+	msgsDeltaOver := n.conn.OutMsgs-n.conn.InMsgs >= maxMsgsBehind
 
 	// If we are behind on either condition, sleep a bit to catch up receiver.
 	if bytesDeltaOver || msgsDeltaOver {
 		time.Sleep(delay)
 	}
 
-	n.Publish(subject, message)
+	n.conn.Publish(subject, message)
+}
+
+func (n *NATSPeer) Teardown() {
+	n.conn.Close()
 }

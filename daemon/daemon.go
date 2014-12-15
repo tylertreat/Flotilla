@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/mangos"
 	"github.com/gdamore/mangos/protocol/rep"
 	"github.com/gdamore/mangos/transport/tcp"
+	"github.com/tylertreat/flotilla/daemon/beanstalkd"
 	"github.com/tylertreat/flotilla/daemon/nats"
 )
 
@@ -24,9 +25,11 @@ const (
 	sub        operation = "subscribers"
 	pub        operation = "publishers"
 	results    operation = "results"
+	teardown   operation = "teardown"
 	latency    test      = "latency"
 	throughput test      = "throughput"
 	NATS                 = "nats"
+	Beanstalkd           = "beanstalkd"
 )
 
 type request struct {
@@ -61,8 +64,10 @@ type broker interface {
 }
 
 type peer interface {
+	Subscribe() error
 	Recv() []byte
 	Send([]byte)
+	Teardown()
 }
 
 type Daemon struct {
@@ -166,6 +171,8 @@ func (d *Daemon) processBrokerStart(broker, port string) (interface{}, error) {
 	switch broker {
 	case NATS:
 		d.broker = &nats.NATSBroker{}
+	case Beanstalkd:
+		d.broker = &beanstalkd.BeanstalkdBroker{}
 	default:
 		return "", fmt.Errorf("Invalid broker %s", broker)
 	}
@@ -211,6 +218,8 @@ func (d *Daemon) processPeerRequest(req request) response {
 			msg = err.Error()
 			err = nil
 		}
+	case teardown:
+		d.processTeardown()
 	default:
 		err = fmt.Errorf("Invalid operation %s", req.Operation)
 	}
@@ -255,6 +264,10 @@ func (d *Daemon) processSub(broker, host string, count, numMessages int,
 	for i := 0; i < count; i++ {
 		receiver, err := newPeer(broker, host)
 		if err != nil {
+			return err
+		}
+
+		if err := receiver.Subscribe(); err != nil {
 			return err
 		}
 
@@ -306,10 +319,24 @@ func (d *Daemon) processResults() ([]*result, []*result, error) {
 	return pubResults, subResults, nil
 }
 
+func (d *Daemon) processTeardown() {
+	for _, subscriber := range d.subscribers {
+		subscriber.Teardown()
+	}
+	d.subscribers = d.subscribers[:0]
+
+	for _, publisher := range d.publishers {
+		publisher.Teardown()
+	}
+	d.publishers = d.publishers[:0]
+}
+
 func newPeer(broker, host string) (peer, error) {
 	switch broker {
 	case NATS:
-		return nats.NewNATS(host)
+		return nats.NewNATSPeer(host)
+	case Beanstalkd:
+		return beanstalkd.NewBeanstalkdPeer(host)
 	default:
 		return nil, fmt.Errorf("Invalid broker: %s", broker)
 	}
