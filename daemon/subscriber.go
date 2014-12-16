@@ -2,7 +2,9 @@ package daemon
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/codahale/hdrhistogram"
@@ -18,7 +20,8 @@ type subscriber struct {
 	started     int64
 	stopped     int64
 	counter     int
-	results     chan *result
+	results     *result
+	mu          sync.Mutex
 }
 
 type latencyResults struct {
@@ -55,10 +58,12 @@ func (s *subscriber) testThroughput() {
 		if s.counter == s.numMessages {
 			s.stopped = time.Now().UnixNano()
 			ms := float32(s.stopped-s.started) / 1000000.0
-			s.results <- &result{
+			s.mu.Lock()
+			s.results = &result{
 				Duration:   ms,
 				Throughput: 1000 * float32(s.numMessages) / ms,
 			}
+			s.mu.Unlock()
 			return
 		}
 	}
@@ -75,7 +80,8 @@ func (s *subscriber) testLatency() {
 
 		s.counter++
 		if s.counter == s.numMessages {
-			s.results <- &result{
+			s.mu.Lock()
+			s.results = &result{
 				Latency: &latencyResults{
 					Min:    latencies.Min(),
 					Q1:     latencies.ValueAtQuantile(25),
@@ -86,7 +92,18 @@ func (s *subscriber) testLatency() {
 					StdDev: latencies.StdDev(),
 				},
 			}
+			s.mu.Unlock()
 			return
 		}
 	}
+}
+
+func (s *subscriber) getResults() (*result, error) {
+	s.mu.Lock()
+	r := s.results
+	s.mu.Unlock()
+	if r == nil {
+		return nil, errors.New("Results not ready")
+	}
+	return r, nil
 }

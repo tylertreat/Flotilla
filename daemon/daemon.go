@@ -251,7 +251,6 @@ func (d *Daemon) processPub(broker, host string, count, numMessages int,
 			numMessages: numMessages,
 			messageSize: messageSize,
 			test:        test,
-			results:     make(chan *result, 1),
 		})
 	}
 
@@ -277,7 +276,6 @@ func (d *Daemon) processSub(broker, host string, count, numMessages int,
 			numMessages: numMessages,
 			messageSize: messageSize,
 			test:        test,
-			results:     make(chan *result, 1),
 		}
 		d.subscribers = append(d.subscribers, subscriber)
 		go subscriber.start()
@@ -297,23 +295,20 @@ func (d *Daemon) processPublisherStart() error {
 func (d *Daemon) processResults() ([]*result, []*result, error) {
 	subResults := make([]*result, 0, len(d.subscribers))
 	for _, subscriber := range d.subscribers {
-		select {
-		case result := <-subscriber.results:
-			subResults = append(subResults, result)
-		default:
-			return nil, nil, errors.New("Results not ready")
+		result, err := subscriber.getResults()
+		if err != nil {
+			return nil, nil, err
 		}
+		subResults = append(subResults, result)
 	}
 
 	pubResults := make([]*result, 0, len(d.publishers))
 	for _, publisher := range d.publishers {
-		select {
-		case result := <-publisher.results:
-			pubResults = append(pubResults, result)
-		default:
-			log.Println("Results not ready")
-			return nil, nil, errors.New("Results not ready")
+		result, err := publisher.getResults()
+		if err != nil {
+			return nil, nil, err
 		}
+		pubResults = append(pubResults, result)
 	}
 
 	return pubResults, subResults, nil

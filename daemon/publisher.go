@@ -2,7 +2,9 @@ package daemon
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -12,7 +14,8 @@ type publisher struct {
 	numMessages int
 	messageSize int64
 	test        test
-	results     chan *result
+	results     *result
+	mu          sync.Mutex
 }
 
 func (p *publisher) start() {
@@ -34,10 +37,12 @@ func (p *publisher) testThroughput() {
 	}
 	stop := time.Now().UnixNano()
 	ms := float32(stop-start) / 1000000
-	p.results <- &result{
+	p.mu.Lock()
+	p.results = &result{
 		Duration:   ms,
 		Throughput: 1000 * float32(p.numMessages) / ms,
 	}
+	p.mu.Unlock()
 }
 
 func (p *publisher) testLatency() {
@@ -49,8 +54,20 @@ func (p *publisher) testLatency() {
 	}
 	stop := time.Now().UnixNano()
 	ms := float32(stop-start) / 1000000
-	p.results <- &result{
+	p.mu.Lock()
+	p.results = &result{
 		Duration:   ms,
 		Throughput: 1000 * float32(p.numMessages) / ms,
 	}
+	p.mu.Unlock()
+}
+
+func (p *publisher) getResults() (*result, error) {
+	p.mu.Lock()
+	r := p.results
+	p.mu.Unlock()
+	if r == nil {
+		return nil, errors.New("Results not ready")
+	}
+	return r, nil
 }
