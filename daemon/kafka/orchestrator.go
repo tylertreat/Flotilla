@@ -8,10 +8,16 @@ import (
 
 const (
 	zookeeper     = "jplock/zookeeper:3.4.6"
+	zookeeperCmd  = "docker run -d -p %s:%s %s"
 	zookeeperPort = "2181"
-	kafka         = "stealthly/docker-kafka"
+	kafka         = "ches/kafka"
 	kafkaPort     = "9092"
-	kafkaCmd      = `docker run -d -p %s:%s -e "ZK_PORT_2181_TCP_ADDR=%s" -e "HOST_IP=%s" -e "BROKER_ID=1" -e "PORT=%s" %s`
+	jmxPort       = "7203"
+	kafkaCmd      = `docker run -d \
+	                     -h %s \
+	                     -p %s:%s -p %s:%s \
+	                     -e EXPOSED_HOST=%s \
+						 -e ZOOKEEPER_IP=%s %s`
 )
 
 type KafkaBroker struct {
@@ -20,11 +26,11 @@ type KafkaBroker struct {
 }
 
 func (k *KafkaBroker) Start(host, port string) (interface{}, error) {
-	if port == zookeeperPort {
+	if port == zookeeperPort || port == jmxPort {
 		return nil, fmt.Errorf("Port %s is reserved", port)
 	}
 
-	cmd := fmt.Sprintf("docker run -d -p %s:%s  %s", zookeeperPort, zookeeperPort, zookeeper)
+	cmd := fmt.Sprintf(zookeeperCmd, zookeeperPort, zookeeperPort, zookeeper)
 	fmt.Println(cmd)
 	zkContainerID, err := exec.Command("/bin/sh", "-c", cmd).Output()
 	if err != nil {
@@ -33,7 +39,7 @@ func (k *KafkaBroker) Start(host, port string) (interface{}, error) {
 	}
 	log.Printf("Started container %s: %s", zookeeper, zkContainerID)
 
-	cmd = fmt.Sprintf(kafkaCmd, kafkaPort, kafkaPort, host, host, kafkaPort, kafka)
+	cmd = fmt.Sprintf(kafkaCmd, host, kafkaPort, kafkaPort, jmxPort, jmxPort, host, host, kafka)
 	fmt.Println(cmd)
 	kafkaContainerID, err := exec.Command("/bin/sh", "-c", cmd).Output()
 	if err != nil {

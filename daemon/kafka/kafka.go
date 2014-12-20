@@ -2,7 +2,6 @@ package kafka
 
 import (
 	"strings"
-	"time"
 
 	"github.com/Shopify/sarama"
 )
@@ -49,7 +48,6 @@ func (k *KafkaPeer) Subscribe() error {
 
 func (k *KafkaPeer) Recv() []byte {
 	event := <-k.consumer.Events()
-	println("recv")
 	if event.Err != nil {
 		panic(event.Err)
 	}
@@ -60,7 +58,6 @@ func (k *KafkaPeer) Send(message []byte) {
 	for {
 		select {
 		case k.producer.Input() <- &sarama.MessageToSend{Topic: topic, Key: nil, Value: sarama.ByteEncoder(message)}:
-			time.Sleep(time.Second)
 			return
 		case err := <-k.producer.Errors():
 			panic(err.Err)
