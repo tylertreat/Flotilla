@@ -32,11 +32,11 @@ func (n *NATSBroker) Stop() (interface{}, error) {
 	containerID, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker kill %s", n.containerID)).Output()
 	if err != nil {
-		log.Printf("Failed to stop container: %s", err.Error())
+		log.Printf("Failed to stop container %s: %s", gnatsd, err.Error())
 		return "", err
 	}
 
-	log.Printf("Stopped container %s", n.containerID)
+	log.Printf("Stopped container %s: %s", gnatsd, n.containerID)
 	n.containerID = ""
 	return string(containerID), nil
 }

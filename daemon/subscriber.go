@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -47,7 +48,14 @@ func (s *subscriber) start() {
 
 func (s *subscriber) testThroughput() {
 	for {
-		s.Recv()
+		_, err := s.Recv()
+		if err != nil {
+			log.Printf("Subscriber error: %s", err.Error())
+			s.mu.Lock()
+			s.results = &result{Err: err.Error()}
+			s.mu.Unlock()
+			return
+		}
 
 		if !s.hasStarted {
 			s.hasStarted = true
@@ -64,6 +72,7 @@ func (s *subscriber) testThroughput() {
 				Throughput: 1000 * float32(s.numMessages) / ms,
 			}
 			s.mu.Unlock()
+			log.Println("Subscriber completed")
 			return
 		}
 	}
@@ -72,10 +81,17 @@ func (s *subscriber) testThroughput() {
 func (s *subscriber) testLatency() {
 	latencies := hdrhistogram.New(0, 3600000, 5)
 	for {
-		message := s.Recv()
+		message, err := s.Recv()
 		now := time.Now().UnixNano()
-		then, _ := binary.Varint(message)
+		if err != nil {
+			log.Printf("Subscriber error: %s", err.Error())
+			s.mu.Lock()
+			s.results = &result{Err: err.Error()}
+			s.mu.Unlock()
+			return
+		}
 
+		then, _ := binary.Varint(message)
 		latencies.RecordValue((now - then) / 1000000)
 
 		s.counter++
@@ -93,6 +109,7 @@ func (s *subscriber) testLatency() {
 				},
 			}
 			s.mu.Unlock()
+			log.Println("Subscriber completed")
 			return
 		}
 	}

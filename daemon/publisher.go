@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 )
@@ -33,7 +34,12 @@ func (p *publisher) testThroughput() {
 	message := make([]byte, p.messageSize)
 	start := time.Now().UnixNano()
 	for i := 0; i < p.numMessages; i++ {
-		p.Send(message)
+		if err := p.Send(message); err != nil {
+			p.mu.Lock()
+			p.results = &result{Err: err.Error()}
+			p.mu.Unlock()
+			return
+		}
 	}
 	stop := time.Now().UnixNano()
 	ms := float32(stop-start) / 1000000
@@ -43,6 +49,7 @@ func (p *publisher) testThroughput() {
 		Throughput: 1000 * float32(p.numMessages) / ms,
 	}
 	p.mu.Unlock()
+	log.Println("Publisher completed")
 }
 
 func (p *publisher) testLatency() {
@@ -50,7 +57,12 @@ func (p *publisher) testLatency() {
 	start := time.Now().UnixNano()
 	for i := 0; i < p.numMessages; i++ {
 		binary.PutVarint(message, time.Now().UnixNano())
-		p.Send(message)
+		if err := p.Send(message); err != nil {
+			p.mu.Lock()
+			p.results = &result{Err: err.Error()}
+			p.mu.Unlock()
+			return
+		}
 	}
 	stop := time.Now().UnixNano()
 	ms := float32(stop-start) / 1000000
@@ -60,6 +72,7 @@ func (p *publisher) testLatency() {
 		Throughput: 1000 * float32(p.numMessages) / ms,
 	}
 	p.mu.Unlock()
+	log.Println("Publisher completed")
 }
 
 func (p *publisher) getResults() (*result, error) {

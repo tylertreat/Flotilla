@@ -31,7 +31,6 @@ func (k *KafkaBroker) Start(host, port string) (interface{}, error) {
 	}
 
 	cmd := fmt.Sprintf(zookeeperCmd, zookeeperPort, zookeeperPort, zookeeper)
-	fmt.Println(cmd)
 	zkContainerID, err := exec.Command("/bin/sh", "-c", cmd).Output()
 	if err != nil {
 		log.Printf("Failed to start container %s: %s", zookeeper, err.Error())
@@ -40,7 +39,6 @@ func (k *KafkaBroker) Start(host, port string) (interface{}, error) {
 	log.Printf("Started container %s: %s", zookeeper, zkContainerID)
 
 	cmd = fmt.Sprintf(kafkaCmd, host, kafkaPort, kafkaPort, jmxPort, jmxPort, host, host, kafka)
-	fmt.Println(cmd)
 	kafkaContainerID, err := exec.Command("/bin/sh", "-c", cmd).Output()
 	if err != nil {
 		log.Printf("Failed to start container %s: %s", kafka, err.Error())
@@ -57,15 +55,16 @@ func (k *KafkaBroker) Start(host, port string) (interface{}, error) {
 func (k *KafkaBroker) Stop() (interface{}, error) {
 	_, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("docker kill %s", k.zookeeperContainerID)).Output()
 	if err != nil {
-		log.Printf("Failed to stop container: %s", err.Error())
+		log.Printf("Failed to stop container %s: %s", zookeeper, err.Error())
 	}
+	log.Printf("Stopped container %s: %s", zookeeper, k.zookeeperContainerID)
 
 	kafkaContainerID, e := exec.Command("/bin/sh", "-c", fmt.Sprintf("docker kill %s", k.kafkaContainerID)).Output()
 	if err != nil {
-		log.Printf("Failed to stop container: %s", err.Error())
+		log.Printf("Failed to stop container %s: %s", kafka, err.Error())
 		err = e
 	}
+	log.Printf("Stopped container %s: %s", kafka, k.kafkaContainerID)
 
 	return string(kafkaContainerID), err
-	return "", nil
 }

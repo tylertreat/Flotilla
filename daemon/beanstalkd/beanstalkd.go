@@ -39,12 +39,13 @@ func (b *BeanstalkdPeer) Subscribe() error {
 	return nil
 }
 
-func (b *BeanstalkdPeer) Recv() []byte {
-	return <-b.messages
+func (b *BeanstalkdPeer) Recv() ([]byte, error) {
+	return <-b.messages, nil
 }
 
-func (b *BeanstalkdPeer) Send(message []byte) {
-	b.conn.Put(message, 1, 0, 0)
+func (b *BeanstalkdPeer) Send(message []byte) error {
+	_, err := b.conn.Put(message, 1, 0, 0)
+	return err
 }
 
 func (b *BeanstalkdPeer) Teardown() {

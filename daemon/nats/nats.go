@@ -47,11 +47,11 @@ func (n *NATSPeer) Subscribe() error {
 	return nil
 }
 
-func (n *NATSPeer) Recv() []byte {
-	return <-n.messages
+func (n *NATSPeer) Recv() ([]byte, error) {
+	return <-n.messages, nil
 }
 
-func (n *NATSPeer) Send(message []byte) {
+func (n *NATSPeer) Send(message []byte) error {
 	// Check if we are behind by >= 1MB bytes.
 	bytesDeltaOver := n.conn.OutBytes-n.conn.InBytes >= maxBytesBehind
 
@@ -63,7 +63,7 @@ func (n *NATSPeer) Send(message []byte) {
 		time.Sleep(delay)
 	}
 
-	n.conn.Publish(subject, message)
+	return n.conn.Publish(subject, message)
 }
 
 func (n *NATSPeer) Teardown() {

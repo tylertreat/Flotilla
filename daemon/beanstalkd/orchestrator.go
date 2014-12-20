@@ -32,11 +32,10 @@ func (b *BeanstalkdBroker) Stop() (interface{}, error) {
 	containerID, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker kill %s", b.containerID)).Output()
 	if err != nil {
-		log.Printf("Failed to stop container: %s", err.Error())
+		log.Printf("Failed to stop container %s: %s", beanstalkd, err.Error())
 		return "", err
 	}
 
-	log.Printf("Stopped container %s", b.containerID)
-	b.containerID = ""
+	log.Printf("Stopped container %s: %s", beanstalkd, b.containerID)
 	return string(containerID), nil
 }

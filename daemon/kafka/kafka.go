@@ -46,22 +46,20 @@ func (k *KafkaPeer) Subscribe() error {
 	return nil
 }
 
-func (k *KafkaPeer) Recv() []byte {
+func (k *KafkaPeer) Recv() ([]byte, error) {
 	event := <-k.consumer.Events()
 	if event.Err != nil {
-		panic(event.Err)
+		return nil, event.Err
 	}
-	return event.Value
+	return event.Value, nil
 }
 
-func (k *KafkaPeer) Send(message []byte) {
-	for {
-		select {
-		case k.producer.Input() <- &sarama.MessageToSend{Topic: topic, Key: nil, Value: sarama.ByteEncoder(message)}:
-			return
-		case err := <-k.producer.Errors():
-			panic(err.Err)
-		}
+func (k *KafkaPeer) Send(message []byte) error {
+	select {
+	case k.producer.Input() <- &sarama.MessageToSend{Topic: topic, Key: nil, Value: sarama.ByteEncoder(message)}:
+		return nil
+	case err := <-k.producer.Errors():
+		return err.Err
 	}
 }
 

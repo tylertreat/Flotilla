@@ -58,6 +58,7 @@ type result struct {
 	Duration   float32         `json:"duration,omitempty"`
 	Throughput float32         `json:"throughput,omitempty"`
 	Latency    *latencyResults `json:"latency,omitempty"`
+	Err        string          `json:"error,omitempty"`
 }
 
 type broker interface {
@@ -67,8 +68,8 @@ type broker interface {
 
 type peer interface {
 	Subscribe() error
-	Recv() []byte
-	Send([]byte)
+	Recv() ([]byte, error)
+	Send([]byte) error
 	Teardown()
 }
 
@@ -315,6 +316,7 @@ func (d *Daemon) processResults() ([]*result, []*result, error) {
 		pubResults = append(pubResults, result)
 	}
 
+	log.Println("Benchmark completed")
 	return pubResults, subResults, nil
 }
 
