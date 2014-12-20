@@ -10,6 +10,7 @@ import (
 	"github.com/gdamore/mangos/protocol/rep"
 	"github.com/gdamore/mangos/transport/tcp"
 	"github.com/tylertreat/flotilla/daemon/beanstalkd"
+	"github.com/tylertreat/flotilla/daemon/kafka"
 	"github.com/tylertreat/flotilla/daemon/nats"
 )
 
@@ -30,6 +31,7 @@ const (
 	throughput test      = "throughput"
 	NATS                 = "nats"
 	Beanstalkd           = "beanstalkd"
+	Kafka                = "kafka"
 )
 
 type request struct {
@@ -59,7 +61,7 @@ type result struct {
 }
 
 type broker interface {
-	Start(string) (interface{}, error)
+	Start(string, string) (interface{}, error)
 	Stop() (interface{}, error)
 }
 
@@ -149,7 +151,7 @@ func (d *Daemon) processBrokerRequest(req request) response {
 	)
 	switch req.Operation {
 	case start:
-		result, err = d.processBrokerStart(req.Broker, req.Port)
+		result, err = d.processBrokerStart(req.Broker, req.Host, req.Port)
 	case stop:
 		result, err = d.processBrokerStop()
 	default:
@@ -163,7 +165,7 @@ func (d *Daemon) processBrokerRequest(req request) response {
 	return response{Success: err == nil, Message: msg, Result: result}
 }
 
-func (d *Daemon) processBrokerStart(broker, port string) (interface{}, error) {
+func (d *Daemon) processBrokerStart(broker, host, port string) (interface{}, error) {
 	if d.broker != nil {
 		return "", errors.New("Broker already running")
 	}
@@ -173,11 +175,13 @@ func (d *Daemon) processBrokerStart(broker, port string) (interface{}, error) {
 		d.broker = &nats.NATSBroker{}
 	case Beanstalkd:
 		d.broker = &beanstalkd.BeanstalkdBroker{}
+	case Kafka:
+		d.broker = &kafka.KafkaBroker{}
 	default:
 		return "", fmt.Errorf("Invalid broker %s", broker)
 	}
 
-	result, err := d.broker.Start(port)
+	result, err := d.broker.Start(host, port)
 	if err != nil {
 		d.broker = nil
 	}
@@ -332,6 +336,8 @@ func newPeer(broker, host string) (peer, error) {
 		return nats.NewNATSPeer(host)
 	case Beanstalkd:
 		return beanstalkd.NewBeanstalkdPeer(host)
+	case Kafka:
+		return kafka.NewKafkaPeer(host)
 	default:
 		return nil, fmt.Errorf("Invalid broker: %s", broker)
 	}

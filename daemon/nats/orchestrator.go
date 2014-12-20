@@ -15,7 +15,7 @@ type NATSBroker struct {
 	containerID string
 }
 
-func (n *NATSBroker) Start(port string) (interface{}, error) {
+func (n *NATSBroker) Start(host, port string) (interface{}, error) {
 	containerID, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker run -d -p %s:%s %s", port, internalPort, gnatsd)).Output()
 	if err != nil {

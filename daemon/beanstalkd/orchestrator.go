@@ -15,7 +15,7 @@ type BeanstalkdBroker struct {
 	containerID string
 }
 
-func (b *BeanstalkdBroker) Start(port string) (interface{}, error) {
+func (b *BeanstalkdBroker) Start(host, port string) (interface{}, error) {
 	containerID, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker run -d -p %s:%s %s", port, internalPort, beanstalkd)).Output()
 	if err != nil {
