@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/mangos"
 	"github.com/gdamore/mangos/protocol/rep"
 	"github.com/gdamore/mangos/transport/tcp"
+	"github.com/tylertreat/flotilla/daemon/activemq"
 	"github.com/tylertreat/flotilla/daemon/beanstalkd"
 	"github.com/tylertreat/flotilla/daemon/kafka"
 	"github.com/tylertreat/flotilla/daemon/kestrel"
@@ -33,6 +34,7 @@ const (
 	Beanstalkd           = "beanstalkd"
 	Kafka                = "kafka"
 	Kestrel              = "kestrel"
+	ActiveMQ             = "activemq"
 )
 
 type request struct {
@@ -183,6 +185,8 @@ func (d *Daemon) processBrokerStart(broker, host, port string) (interface{}, err
 		d.broker = &kafka.KafkaBroker{}
 	case Kestrel:
 		d.broker = &kestrel.KestrelBroker{}
+	case ActiveMQ:
+		d.broker = &activemq.ActiveMQBroker{}
 	default:
 		return "", fmt.Errorf("Invalid broker %s", broker)
 	}
@@ -307,6 +311,8 @@ func newPeer(broker, host string) (peer, error) {
 		return kafka.NewKafkaPeer(host)
 	case Kestrel:
 		return kestrel.NewKestrelPeer(host)
+	case ActiveMQ:
+		return activemq.NewActiveMQPeer(host)
 	default:
 		return nil, fmt.Errorf("Invalid broker: %s", broker)
 	}
