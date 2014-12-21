@@ -11,6 +11,7 @@ import (
 	"github.com/gdamore/mangos/transport/tcp"
 	"github.com/tylertreat/flotilla/daemon/beanstalkd"
 	"github.com/tylertreat/flotilla/daemon/kafka"
+	"github.com/tylertreat/flotilla/daemon/kestrel"
 	"github.com/tylertreat/flotilla/daemon/nats"
 )
 
@@ -31,6 +32,7 @@ const (
 	NATS                 = "nats"
 	Beanstalkd           = "beanstalkd"
 	Kafka                = "kafka"
+	Kestrel              = "kestrel"
 )
 
 type request struct {
@@ -179,6 +181,8 @@ func (d *Daemon) processBrokerStart(broker, host, port string) (interface{}, err
 		d.broker = &beanstalkd.BeanstalkdBroker{}
 	case Kafka:
 		d.broker = &kafka.KafkaBroker{}
+	case Kestrel:
+		d.broker = &kestrel.KestrelBroker{}
 	default:
 		return "", fmt.Errorf("Invalid broker %s", broker)
 	}
@@ -301,6 +305,8 @@ func newPeer(broker, host string) (peer, error) {
 		return beanstalkd.NewBeanstalkdPeer(host)
 	case Kafka:
 		return kafka.NewKafkaPeer(host)
+	case Kestrel:
+		return kestrel.NewKestrelPeer(host)
 	default:
 		return nil, fmt.Errorf("Invalid broker: %s", broker)
 	}

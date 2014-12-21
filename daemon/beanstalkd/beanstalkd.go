@@ -28,7 +28,7 @@ func (b *BeanstalkdPeer) Subscribe() error {
 		for {
 			id, message, err := b.conn.Reserve(5 * time.Second)
 			if err != nil {
-				// Broker shutdown
+				// Broker shutdown.
 				return
 			}
 
