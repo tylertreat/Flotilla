@@ -19,10 +19,9 @@ type operation string
 type test string
 
 const (
-	brokerd    daemon    = "broker"
-	peerd      daemon    = "peer"
 	start      operation = "start"
 	stop       operation = "stop"
+	run        operation = "run"
 	sub        operation = "subscribers"
 	pub        operation = "publishers"
 	results    operation = "results"
@@ -35,7 +34,6 @@ const (
 )
 
 type request struct {
-	Daemon      daemon    `json:"daemon"`
 	Operation   operation `json:"operation"`
 	Broker      string    `json:"broker"`
 	Port        string    `json:"port"`
@@ -114,20 +112,7 @@ func (d *Daemon) loop() error {
 			continue
 		}
 
-		var resp response
-		switch req.Daemon {
-		case brokerd:
-			resp = d.processBrokerRequest(req)
-		case peerd:
-			resp = d.processPeerRequest(req)
-		default:
-			log.Printf("Invalid daemon: %s", req.Daemon)
-			resp = response{
-				Success: false,
-				Message: fmt.Sprintf("Invalid daemon: %s", req.Daemon),
-			}
-		}
-
+		resp := d.processRequest(req)
 		d.sendResponse(resp)
 	}
 }
@@ -144,28 +129,44 @@ func (d *Daemon) sendResponse(rep response) {
 	}
 }
 
-func (d *Daemon) processBrokerRequest(req request) response {
+func (d *Daemon) processRequest(req request) response {
 	var (
-		msg    string
-		result interface{}
-		err    error
+		response response
+		err      error
 	)
 	switch req.Operation {
 	case start:
-		result, err = d.processBrokerStart(req.Broker, req.Host, req.Port)
+		response.Result, err = d.processBrokerStart(req.Broker, req.Host, req.Port)
 	case stop:
-		result, err = d.processBrokerStop()
+		response.Result, err = d.processBrokerStop()
+	case pub:
+		err = d.processPub(req.Broker, req.Host, req.Count, req.NumMessages,
+			req.MessageSize, req.Test)
+	case sub:
+		err = d.processSub(req.Broker, req.Host, req.Count, req.NumMessages,
+			req.MessageSize, req.Test)
+	case run:
+		err = d.processPublisherStart()
+	case results:
+		response.PubResults, response.SubResults, err = d.processResults()
+		if err != nil {
+			response.Message = err.Error()
+			err = nil
+		}
+	case teardown:
+		d.processTeardown()
 	default:
 		err = fmt.Errorf("Invalid operation %s", req.Operation)
 	}
 
 	if err != nil {
-		msg = err.Error()
+		response.Message = err.Error()
+	} else {
+		response.Success = true
 	}
 
-	return response{Success: err == nil, Message: msg, Result: result}
+	return response
 }
-
 func (d *Daemon) processBrokerStart(broker, host, port string) (interface{}, error) {
 	if d.broker != nil {
 		return "", errors.New("Broker already running")
@@ -199,46 +200,6 @@ func (d *Daemon) processBrokerStop() (interface{}, error) {
 		d.broker = nil
 	}
 	return result, err
-}
-
-func (d *Daemon) processPeerRequest(req request) response {
-	var (
-		msg        string
-		pubResults []*result
-		subResults []*result
-		err        error
-	)
-	switch req.Operation {
-	case pub:
-		err = d.processPub(req.Broker, req.Host, req.Count, req.NumMessages,
-			req.MessageSize, req.Test)
-	case sub:
-		err = d.processSub(req.Broker, req.Host, req.Count, req.NumMessages,
-			req.MessageSize, req.Test)
-	case start:
-		err = d.processPublisherStart()
-	case results:
-		pubResults, subResults, err = d.processResults()
-		if err != nil {
-			msg = err.Error()
-			err = nil
-		}
-	case teardown:
-		d.processTeardown()
-	default:
-		err = fmt.Errorf("Invalid operation %s", req.Operation)
-	}
-
-	if err != nil {
-		msg = err.Error()
-	}
-
-	return response{
-		Success:    err == nil,
-		Message:    msg,
-		PubResults: pubResults,
-		SubResults: subResults,
-	}
 }
 
 func (d *Daemon) processPub(broker, host string, count, numMessages int,
