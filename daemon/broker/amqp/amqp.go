@@ -1,9 +1,8 @@
 package amqp
 
 import (
-	"crypto/rand"
-
 	"github.com/streadway/amqp"
+	"github.com/tylertreat/flotilla/daemon/broker"
 )
 
 const (
@@ -29,12 +28,12 @@ func NewAMQPPeer(host string) (*AMQPPeer, error) {
 	}
 
 	queue, err := channel.QueueDeclare(
-		name(), // name
-		false,  // not durable
-		false,  // delete when unused
-		true,   // exclusive
-		false,  // no wait
-		nil,    // arguments
+		broker.GenerateName(), // name
+		false, // not durable
+		false, // delete when unused
+		true,  // exclusive
+		false, // no wait
+		nil,   // arguments
 	)
 	if err != nil {
 		return nil, err
@@ -106,14 +105,4 @@ func (a *AMQPPeer) Send(message []byte) error {
 func (a *AMQPPeer) Teardown() {
 	a.channel.Close()
 	a.conn.Close()
-}
-
-func name() string {
-	alphanum := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	bytes := make([]byte, 16)
-	rand.Read(bytes)
-	for i, b := range bytes {
-		bytes[i] = alphanum[b%byte(len(alphanum))]
-	}
-	return string(bytes)
 }

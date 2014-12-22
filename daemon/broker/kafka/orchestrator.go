@@ -56,15 +56,17 @@ func (k *KafkaBroker) Stop() (interface{}, error) {
 	_, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("docker kill %s", k.zookeeperContainerID)).Output()
 	if err != nil {
 		log.Printf("Failed to stop container %s: %s", zookeeper, err.Error())
+	} else {
+		log.Printf("Stopped container %s: %s", zookeeper, k.zookeeperContainerID)
 	}
-	log.Printf("Stopped container %s: %s", zookeeper, k.zookeeperContainerID)
 
 	kafkaContainerID, e := exec.Command("/bin/sh", "-c", fmt.Sprintf("docker kill %s", k.kafkaContainerID)).Output()
-	if err != nil {
+	if e != nil {
 		log.Printf("Failed to stop container %s: %s", kafka, err.Error())
 		err = e
+	} else {
+		log.Printf("Stopped container %s: %s", kafka, k.kafkaContainerID)
 	}
-	log.Printf("Stopped container %s: %s", kafka, k.kafkaContainerID)
 
 	return string(kafkaContainerID), err
 }

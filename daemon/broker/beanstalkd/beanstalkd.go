@@ -19,7 +19,7 @@ func NewBeanstalkdPeer(host string) (*BeanstalkdPeer, error) {
 
 	return &BeanstalkdPeer{
 		conn:     conn,
-		messages: make(chan []byte, 100000),
+		messages: make(chan []byte, 10000),
 	}, nil
 }
 
