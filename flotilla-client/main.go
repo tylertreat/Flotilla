@@ -83,9 +83,9 @@ func runBenchmark(client *broker.Client) {
 		os.Exit(1)
 	}
 
-	fmt.Println("Preparing subscribers")
+	fmt.Println("Preparing consumers")
 	if err := client.StartSubscribers(); err != nil {
-		fmt.Println("Failed to start subscribers:", err)
+		fmt.Println("Failed to start consumers:", err)
 		teardownPeers(client)
 		stopBroker(client)
 		os.Exit(1)
