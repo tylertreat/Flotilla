@@ -33,7 +33,7 @@ func NewCloudPubSubPeer(projectID, jsonKey string) (*CloudPubSubPeer, error) {
 		context:  ctx,
 		messages: make(chan []byte, 10000),
 		acks:     make(chan []string, 100),
-		done:     make(chan bool),
+		done:     make(chan bool, 1),
 	}, nil
 }
 
@@ -74,7 +74,6 @@ func (c *CloudPubSubPeer) Subscribe() error {
 			}
 			c.acks <- ids
 		}
-		println("subscriber done")
 	}()
 	return nil
 }
