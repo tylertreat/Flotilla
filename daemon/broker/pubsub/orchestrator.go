@@ -5,11 +5,11 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/GoogleCloudPlatform/gcloud-golang"
-	"github.com/GoogleCloudPlatform/gcloud-golang/pubsub"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/cloud"
+	"google.golang.org/cloud/pubsub"
 )
 
 const topic = "test"
