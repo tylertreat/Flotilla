@@ -71,6 +71,7 @@ type Result struct {
 }
 
 type ResultContainer struct {
+	Peer              string
 	PublisherResults  []*Result
 	SubscriberResults []*Result
 }
@@ -87,7 +88,7 @@ type LatencyResults struct {
 
 type Client struct {
 	brokerd   mangos.Socket
-	peerd     []mangos.Socket
+	peerd     map[string]mangos.Socket
 	Benchmark *Benchmark
 }
 
@@ -103,8 +104,8 @@ func NewClient(b *Benchmark) (*Client, error) {
 		return nil, err
 	}
 
-	peerd := make([]mangos.Socket, len(b.PeerHosts))
-	for i, peer := range b.PeerHosts {
+	peerd := make(map[string]mangos.Socket, len(b.PeerHosts))
+	for _, peer := range b.PeerHosts {
 		s, err := req.NewSocket()
 		if err != nil {
 			return nil, err
@@ -116,7 +117,7 @@ func NewClient(b *Benchmark) (*Client, error) {
 			return nil, err
 		}
 
-		peerd[i] = s
+		peerd[peer] = s
 	}
 
 	return &Client{
@@ -226,8 +227,8 @@ func (c *Client) CollectResults() <-chan []*ResultContainer {
 		subResults := make(chan *ResultContainer, len(c.peerd))
 		complete := 0
 
-		for _, peerd := range c.peerd {
-			go collectResultsFromPeer(peerd, subResults)
+		for host, peerd := range c.peerd {
+			go collectResultsFromPeer(host, peerd, subResults)
 		}
 
 		for {
@@ -281,7 +282,7 @@ func sendRequest(s mangos.Socket, request request) (*response, error) {
 	return &resp, nil
 }
 
-func collectResultsFromPeer(peerd mangos.Socket, subResults chan *ResultContainer) {
+func collectResultsFromPeer(host string, peerd mangos.Socket, subResults chan *ResultContainer) {
 	for {
 		resp, err := sendRequest(peerd, request{Operation: results})
 		if err != nil {
@@ -300,6 +301,7 @@ func collectResultsFromPeer(peerd mangos.Socket, subResults chan *ResultContaine
 		}
 
 		subResults <- &ResultContainer{
+			Peer:              host,
 			PublisherResults:  resp.PubResults,
 			SubscriberResults: resp.SubResults,
 		}

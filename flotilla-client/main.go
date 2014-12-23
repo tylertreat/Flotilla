@@ -109,15 +109,13 @@ func runBenchmark(client *broker.Client) {
 }
 
 func printResults(results []*broker.ResultContainer, client *broker.Client) {
-	// FIXME: Results aren't ordered, so the peer host doesn't necessarily
-	// match up.
 	publisherData := [][]string{}
 	i := 1
-	for p, peerResults := range results {
+	for _, peerResults := range results {
 		for _, result := range peerResults.PublisherResults {
 			publisherData = append(publisherData, []string{
 				strconv.Itoa(i),
-				client.Benchmark.PeerHosts[p],
+				peerResults.Peer,
 				strconv.FormatBool(result.Err != ""),
 				strconv.FormatFloat(float64(result.Duration), 'f', 3, 32),
 				strconv.FormatFloat(float64(result.Throughput), 'f', 3, 32),
@@ -137,11 +135,11 @@ func printResults(results []*broker.ResultContainer, client *broker.Client) {
 	case broker.Throughput:
 		subscriberData := [][]string{}
 		i = 1
-		for p, peerResults := range results {
+		for _, peerResults := range results {
 			for _, result := range peerResults.SubscriberResults {
 				subscriberData = append(subscriberData, []string{
 					strconv.Itoa(i),
-					client.Benchmark.PeerHosts[p],
+					peerResults.Peer,
 					strconv.FormatBool(result.Err != ""),
 					strconv.FormatFloat(float64(result.Duration), 'f', 3, 32),
 					strconv.FormatFloat(float64(result.Throughput), 'f', 3, 32),
@@ -159,11 +157,11 @@ func printResults(results []*broker.ResultContainer, client *broker.Client) {
 	case broker.Latency:
 		latencyData := [][]string{}
 		i = 1
-		for p, peerResults := range results {
+		for _, peerResults := range results {
 			for _, result := range peerResults.SubscriberResults {
 				latencyData = append(latencyData, []string{
 					strconv.Itoa(i),
-					client.Benchmark.PeerHosts[p],
+					peerResults.Peer,
 					strconv.FormatBool(result.Err != ""),
 					strconv.FormatInt(result.Latency.Min, 10),
 					strconv.FormatInt(result.Latency.Q1, 10),
