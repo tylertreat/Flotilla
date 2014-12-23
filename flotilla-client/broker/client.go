@@ -15,23 +15,25 @@ type operation string
 type daemon string
 
 const (
-	start        operation = "start"
-	stop         operation = "stop"
-	sub          operation = "subscribers"
-	pub          operation = "publishers"
-	run          operation = "run"
-	results      operation = "results"
-	teardown     operation = "teardown"
-	resultsSleep           = time.Second
+	minNumMessages           = 100
+	minMessageSize           = 9
+	start          operation = "start"
+	stop           operation = "stop"
+	sub            operation = "subscribers"
+	pub            operation = "publishers"
+	run            operation = "run"
+	results        operation = "results"
+	teardown       operation = "teardown"
+	resultsSleep             = time.Second
 )
 
 type request struct {
 	Operation   operation `json:"operation"`
 	Broker      string    `json:"broker"`
 	Port        string    `json:"port"`
-	NumMessages int       `json:"num_messages"`
-	MessageSize int64     `json:"message_size"`
-	Count       int       `json:"count"`
+	NumMessages uint      `json:"num_messages"`
+	MessageSize uint64    `json:"message_size"`
+	Count       uint      `json:"count"`
 	Host        string    `json:"host"`
 }
 
@@ -49,10 +51,50 @@ type Benchmark struct {
 	BrokerHost  string
 	BrokerPort  string
 	PeerHosts   []string
-	NumMessages int
-	MessageSize int64
-	Publishers  int
-	Subscribers int
+	NumMessages uint
+	MessageSize uint64
+	Publishers  uint
+	Subscribers uint
+}
+
+func (b *Benchmark) validate() error {
+	if b.BrokerdHost == "" {
+		return errors.New("Invalid broker daemon host")
+	}
+
+	if b.BrokerName == "" {
+		return errors.New("Invalid broker name")
+	}
+
+	if b.BrokerHost == "" {
+		return errors.New("Invalid broker host")
+	}
+
+	if b.BrokerPort == "" {
+		return errors.New("Invalid broker port")
+	}
+
+	if len(b.PeerHosts) == 0 {
+		return errors.New("Must provide at least one peer host")
+	}
+
+	if b.NumMessages < minNumMessages {
+		return fmt.Errorf("Number of messages must be at least %d", minNumMessages)
+	}
+
+	if b.MessageSize < minMessageSize {
+		return fmt.Errorf("Message size must be at least %d", minMessageSize)
+	}
+
+	if b.Publishers <= 0 {
+		return errors.New("Number of producers must be greater than zero")
+	}
+
+	if b.Subscribers <= 0 {
+		return errors.New("Number of consumers must be greater than zero")
+	}
+
+	return nil
 }
 
 type Result struct {
@@ -85,6 +127,10 @@ type Client struct {
 }
 
 func NewClient(b *Benchmark) (*Client, error) {
+	if err := b.validate(); err != nil {
+		return nil, err
+	}
+
 	brokerd, err := req.NewSocket()
 	if err != nil {
 		return nil, err

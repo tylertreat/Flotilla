@@ -38,10 +38,10 @@ func main() {
 		brokerHost  = flag.String("broker-host", "localhost", "host machine to run broker")
 		brokerdHost = flag.String("host", "localhost:9000", "machine running broker daemon")
 		peerHosts   = flag.String("peer-hosts", "localhost:9000", "comma-separated list of machines to run peers")
-		producers   = flag.Int("producers", defaultNumProducers, "number of producers per host")
-		consumers   = flag.Int("consumers", defaultNumConsumers, "number of consumers per host")
-		numMessages = flag.Int("num-messages", defaultNumMessages, "number of messages to send from each producer")
-		messageSize = flag.Int64("message-size", defaultMessageSize, "size of each message in bytes")
+		producers   = flag.Uint("producers", defaultNumProducers, "number of producers per host")
+		consumers   = flag.Uint("consumers", defaultNumConsumers, "number of consumers per host")
+		numMessages = flag.Uint("num-messages", defaultNumMessages, "number of messages to send from each producer")
+		messageSize = flag.Uint64("message-size", defaultMessageSize, "size of each message in bytes")
 	)
 	flag.Parse()
 
@@ -99,10 +99,31 @@ func runBenchmark(client *broker.Client) {
 		os.Exit(1)
 	}
 
-	printResults(<-client.CollectResults())
+	results := <-client.CollectResults()
+	printSummary(client.Benchmark)
+	printResults(results)
 
 	teardownPeers(client)
 	stopBroker(client)
+}
+
+func printSummary(benchmark *broker.Benchmark) {
+	brokerHost := strings.Split(benchmark.BrokerdHost, ":")[0] + ":" + benchmark.BrokerPort
+	msgSent := int(benchmark.NumMessages) * len(benchmark.PeerHosts) * int(benchmark.Publishers)
+	msgRecv := int(benchmark.NumMessages) * len(benchmark.PeerHosts) * int(benchmark.Subscribers)
+	dataSentKB := (msgSent * int(benchmark.MessageSize)) / 1000
+	dataRecvKB := (msgRecv * int(benchmark.MessageSize)) / 1000
+	fmt.Println("\nTEST SUMMARY\n")
+	fmt.Printf("Broker:             %s (%s)\n", benchmark.BrokerName, brokerHost)
+	fmt.Printf("Nodes:              %s\n", benchmark.PeerHosts)
+	fmt.Printf("Producers per node: %d\n", benchmark.Publishers)
+	fmt.Printf("Consumers per node: %d\n", benchmark.Subscribers)
+	fmt.Printf("Messages produced:  %d\n", msgSent)
+	fmt.Printf("Messages consumed:  %d\n", msgRecv)
+	fmt.Printf("Bytes per message:  %d\n", benchmark.MessageSize)
+	fmt.Printf("Data produced (kb): %d\n", dataSentKB)
+	fmt.Printf("Data consumed (kb): %d\n", dataRecvKB)
+	fmt.Println("")
 }
 
 func printResults(results []*broker.ResultContainer) {
