@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/tylertreat/flotilla/server/daemon"
+	"github.com/tylertreat/flotilla/flotilla-server/daemon"
 )
 
 const defaultPort = 9000
@@ -29,7 +29,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("flotilla daemon started...")
+	fmt.Printf("Flotilla daemon started on port %s...", *port)
 	if err := d.Start(*port); err != nil {
 		panic(err)
 	}

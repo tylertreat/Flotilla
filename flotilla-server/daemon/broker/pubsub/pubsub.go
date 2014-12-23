@@ -9,7 +9,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/cloud/pubsub"
 
-	"github.com/tylertreat/flotilla/server/daemon/broker"
+	"github.com/tylertreat/flotilla/flotilla-server/daemon/broker"
 )
 
 const stopped = 1

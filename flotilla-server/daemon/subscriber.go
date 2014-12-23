@@ -46,6 +46,8 @@ func (s *subscriber) start() {
 	}
 }
 
+// TODO: Combine throughput and latency tests.
+
 func (s *subscriber) testThroughput() {
 	for {
 		_, err := s.Recv()

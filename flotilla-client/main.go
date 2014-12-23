@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/olekukonko/tablewriter"
-	"github.com/tylertreat/flotilla/client/broker"
+	"github.com/tylertreat/flotilla/flotilla-client/broker"
 )
 
 const (
@@ -93,8 +93,6 @@ func runBenchmark(client *broker.Client) {
 		os.Exit(1)
 	}
 
-	// TODO: clean up subscribers
-
 	fmt.Println("Running benchmark")
 	if err := client.RunBenchmark(); err != nil {
 		fmt.Println("Failed to run benchmark:", err)
@@ -111,6 +109,8 @@ func runBenchmark(client *broker.Client) {
 }
 
 func printResults(results []*broker.ResultContainer, client *broker.Client) {
+	// FIXME: Results aren't ordered, so the peer host doesn't necessarily
+	// match up.
 	publisherData := [][]string{}
 	i := 1
 	for p, peerResults := range results {

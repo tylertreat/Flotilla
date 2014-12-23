@@ -30,6 +30,8 @@ func (p *publisher) start() {
 	}
 }
 
+// TODO: Combine throughput and latency tests.
+
 func (p *publisher) testThroughput() {
 	message := make([]byte, p.messageSize)
 	start := time.Now().UnixNano()

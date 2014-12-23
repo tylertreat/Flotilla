@@ -2,7 +2,7 @@ package nsq
 
 import (
 	"github.com/bitly/go-nsq"
-	"github.com/tylertreat/flotilla/server/daemon/broker"
+	"github.com/tylertreat/flotilla/flotilla-server/daemon/broker"
 )
 
 const topic = "test"
