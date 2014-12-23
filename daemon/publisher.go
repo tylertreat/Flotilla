@@ -35,6 +35,7 @@ func (p *publisher) testThroughput() {
 	start := time.Now().UnixNano()
 	for i := 0; i < p.numMessages; i++ {
 		if err := p.Send(message); err != nil {
+			log.Printf("Failed to send message: %s", err.Error())
 			p.mu.Lock()
 			p.results = &result{Err: err.Error()}
 			p.mu.Unlock()
@@ -58,6 +59,7 @@ func (p *publisher) testLatency() {
 	for i := 0; i < p.numMessages; i++ {
 		binary.PutVarint(message, time.Now().UnixNano())
 		if err := p.Send(message); err != nil {
+			log.Printf("Failed to send message: %s", err.Error())
 			p.mu.Lock()
 			p.results = &result{Err: err.Error()}
 			p.mu.Unlock()

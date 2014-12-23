@@ -10,10 +10,21 @@ import (
 const defaultPort = 9000
 
 func main() {
-	port := flag.Int("port", defaultPort, "daemon port")
+	var (
+		port            = flag.Int("port", defaultPort, "daemon port")
+		gCloudProjectID = flag.String("gcloud-project-id", "",
+			"Google Cloud project id (needed for Cloud Pub/Sub)")
+		gCloudJSONKey = flag.String("gcloud-json-key", "",
+			"Google Cloud project JSON key file (needed for Cloud Pub/Sub)")
+	)
 	flag.Parse()
 
-	d, err := daemon.NewDaemon()
+	config := &daemon.Config{
+		GoogleCloudProjectID: *gCloudProjectID,
+		GoogleCloudJSONKey:   *gCloudJSONKey,
+	}
+
+	d, err := daemon.NewDaemon(config)
 	if err != nil {
 		panic(err)
 	}

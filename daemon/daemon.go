@@ -16,6 +16,7 @@ import (
 	"github.com/tylertreat/flotilla/daemon/broker/kestrel"
 	"github.com/tylertreat/flotilla/daemon/broker/nats"
 	"github.com/tylertreat/flotilla/daemon/broker/nsq"
+	"github.com/tylertreat/flotilla/daemon/broker/pubsub"
 )
 
 type daemon string
@@ -23,22 +24,23 @@ type operation string
 type test string
 
 const (
-	start      operation = "start"
-	stop       operation = "stop"
-	run        operation = "run"
-	sub        operation = "subscribers"
-	pub        operation = "publishers"
-	results    operation = "results"
-	teardown   operation = "teardown"
-	latency    test      = "latency"
-	throughput test      = "throughput"
-	NATS                 = "nats"
-	Beanstalkd           = "beanstalkd"
-	Kafka                = "kafka"
-	Kestrel              = "kestrel"
-	ActiveMQ             = "activemq"
-	RabbitMQ             = "rabbitmq"
-	NSQ                  = "nsq"
+	start       operation = "start"
+	stop        operation = "stop"
+	run         operation = "run"
+	sub         operation = "subscribers"
+	pub         operation = "publishers"
+	results     operation = "results"
+	teardown    operation = "teardown"
+	latency     test      = "latency"
+	throughput  test      = "throughput"
+	NATS                  = "nats"
+	Beanstalkd            = "beanstalkd"
+	Kafka                 = "kafka"
+	Kestrel               = "kestrel"
+	ActiveMQ              = "activemq"
+	RabbitMQ              = "rabbitmq"
+	NSQ                   = "nsq"
+	CloudPubSub           = "pubsub"
 )
 
 type request struct {
@@ -79,20 +81,26 @@ type peer interface {
 	Teardown()
 }
 
+type Config struct {
+	GoogleCloudProjectID string
+	GoogleCloudJSONKey   string
+}
+
 type Daemon struct {
 	mangos.Socket
 	broker      broker
 	publishers  []*publisher
 	subscribers []*subscriber
+	config      *Config
 }
 
-func NewDaemon() (*Daemon, error) {
+func NewDaemon(config *Config) (*Daemon, error) {
 	rep, err := rep.NewSocket()
 	if err != nil {
 		return nil, err
 	}
 	rep.AddTransport(tcp.NewTransport())
-	return &Daemon{rep, nil, []*publisher{}, []*subscriber{}}, nil
+	return &Daemon{rep, nil, []*publisher{}, []*subscriber{}, config}, nil
 }
 
 func (d *Daemon) Start(port int) error {
@@ -195,6 +203,11 @@ func (d *Daemon) processBrokerStart(broker, host, port string) (interface{}, err
 		d.broker = &amqp.RabbitMQBroker{}
 	case NSQ:
 		d.broker = &nsq.NSQBroker{}
+	case CloudPubSub:
+		d.broker = &pubsub.CloudPubSubBroker{
+			ProjectID: d.config.GoogleCloudProjectID,
+			JSONKey:   d.config.GoogleCloudJSONKey,
+		}
 	default:
 		return "", fmt.Errorf("Invalid broker %s", broker)
 	}
@@ -222,7 +235,7 @@ func (d *Daemon) processPub(broker, host string, count, numMessages int,
 	messageSize int64, test test) error {
 
 	for i := 0; i < count; i++ {
-		sender, err := newPeer(broker, host)
+		sender, err := d.newPeer(broker, host)
 		if err != nil {
 			return err
 		}
@@ -243,7 +256,7 @@ func (d *Daemon) processSub(broker, host string, count, numMessages int,
 	messageSize int64, test test) error {
 
 	for i := 0; i < count; i++ {
-		receiver, err := newPeer(broker, host)
+		receiver, err := d.newPeer(broker, host)
 		if err != nil {
 			return err
 		}
@@ -309,7 +322,7 @@ func (d *Daemon) processTeardown() {
 	d.publishers = d.publishers[:0]
 }
 
-func newPeer(broker, host string) (peer, error) {
+func (d *Daemon) newPeer(broker, host string) (peer, error) {
 	switch broker {
 	case NATS:
 		return nats.NewNATSPeer(host)
@@ -325,6 +338,11 @@ func newPeer(broker, host string) (peer, error) {
 		return amqp.NewAMQPPeer(host)
 	case NSQ:
 		return nsq.NewNSQPeer(host)
+	case CloudPubSub:
+		return pubsub.NewCloudPubSubPeer(
+			d.config.GoogleCloudProjectID,
+			d.config.GoogleCloudJSONKey,
+		)
 	default:
 		return nil, fmt.Errorf("Invalid broker: %s", broker)
 	}

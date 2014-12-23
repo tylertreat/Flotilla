@@ -12,7 +12,7 @@ const queue = "test"
 
 type KestrelPeer struct {
 	client   *kestrel.Client
-	messages chan *kestrel.QueueItem
+	messages chan []byte
 }
 
 func NewKestrelPeer(host string) (*KestrelPeer, error) {
@@ -34,7 +34,7 @@ func NewKestrelPeer(host string) (*KestrelPeer, error) {
 
 	return &KestrelPeer{
 		client:   client,
-		messages: make(chan *kestrel.QueueItem, 100000),
+		messages: make(chan []byte, 10000),
 	}, nil
 }
 
@@ -48,7 +48,7 @@ func (k *KestrelPeer) Subscribe() error {
 				return
 			}
 			for _, item := range items {
-				k.messages <- item
+				k.messages <- item.Data
 			}
 		}
 	}()
@@ -56,8 +56,7 @@ func (k *KestrelPeer) Subscribe() error {
 }
 
 func (k *KestrelPeer) Recv() ([]byte, error) {
-	item := <-k.messages
-	return item.Data, nil
+	return <-k.messages, nil
 }
 
 func (k *KestrelPeer) Send(message []byte) error {
