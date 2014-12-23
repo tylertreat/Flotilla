@@ -38,7 +38,6 @@ func main() {
 		brokerHost  = flag.String("broker-host", "localhost", "host machine to run broker")
 		brokerdHost = flag.String("host", "localhost:9000", "machine running broker daemon")
 		peerHosts   = flag.String("peer-hosts", "localhost:9000", "comma-separated list of machines to run peers")
-		test        = flag.String("test", string(broker.Throughput), "[throughput|latency]")
 		producers   = flag.Int("producers", defaultNumProducers, "number of producers per host")
 		consumers   = flag.Int("consumers", defaultNumConsumers, "number of consumers per host")
 		numMessages = flag.Int("num-messages", defaultNumMessages, "number of messages to send from each producer")
@@ -58,7 +57,6 @@ func main() {
 		MessageSize: *messageSize,
 		Publishers:  *producers,
 		Subscribers: *consumers,
-		Test:        broker.Test(*test),
 	})
 	if err != nil {
 		fmt.Println("Failed to connect to flotilla:", err)
@@ -101,19 +99,18 @@ func runBenchmark(client *broker.Client) {
 		os.Exit(1)
 	}
 
-	results := <-client.CollectResults()
-	printResults(results, client)
+	printResults(<-client.CollectResults())
 
 	teardownPeers(client)
 	stopBroker(client)
 }
 
-func printResults(results []*broker.ResultContainer, client *broker.Client) {
-	publisherData := [][]string{}
+func printResults(results []*broker.ResultContainer) {
+	producerData := [][]string{}
 	i := 1
 	for _, peerResults := range results {
 		for _, result := range peerResults.PublisherResults {
-			publisherData = append(publisherData, []string{
+			producerData = append(producerData, []string{
 				strconv.Itoa(i),
 				peerResults.Peer,
 				strconv.FormatBool(result.Err != ""),
@@ -127,70 +124,48 @@ func printResults(results []*broker.ResultContainer, client *broker.Client) {
 		"Producer",
 		"Node",
 		"Error",
-		"Duration (ms)",
+		"Duration",
 		"Throughput (msg/sec)",
-	}, publisherData)
+	}, producerData)
 
-	switch client.Benchmark.Test {
-	case broker.Throughput:
-		subscriberData := [][]string{}
-		i = 1
-		for _, peerResults := range results {
-			for _, result := range peerResults.SubscriberResults {
-				subscriberData = append(subscriberData, []string{
-					strconv.Itoa(i),
-					peerResults.Peer,
-					strconv.FormatBool(result.Err != ""),
-					strconv.FormatFloat(float64(result.Duration), 'f', 3, 32),
-					strconv.FormatFloat(float64(result.Throughput), 'f', 3, 32),
-				})
-				i++
-			}
+	consumerData := [][]string{}
+	i = 1
+	for _, peerResults := range results {
+		for _, result := range peerResults.SubscriberResults {
+			consumerData = append(consumerData, []string{
+				strconv.Itoa(i),
+				peerResults.Peer,
+				strconv.FormatBool(result.Err != ""),
+				strconv.FormatFloat(float64(result.Duration), 'f', 3, 32),
+				strconv.FormatFloat(float64(result.Throughput), 'f', 3, 32),
+				strconv.FormatInt(result.Latency.Min, 10),
+				strconv.FormatInt(result.Latency.Q1, 10),
+				strconv.FormatInt(result.Latency.Q2, 10),
+				strconv.FormatInt(result.Latency.Q3, 10),
+				strconv.FormatInt(result.Latency.Max, 10),
+				strconv.FormatFloat(result.Latency.Mean, 'f', 3, 64),
+				strconv.FormatInt(result.Latency.Q3-result.Latency.Q1, 10),
+				strconv.FormatFloat(result.Latency.StdDev, 'f', 3, 64),
+			})
+			i++
 		}
-		printTable([]string{
-			"Consumer",
-			"Node",
-			"Error",
-			"Duration (ms)",
-			"Throughput (msg/sec)",
-		}, subscriberData)
-	case broker.Latency:
-		latencyData := [][]string{}
-		i = 1
-		for _, peerResults := range results {
-			for _, result := range peerResults.SubscriberResults {
-				latencyData = append(latencyData, []string{
-					strconv.Itoa(i),
-					peerResults.Peer,
-					strconv.FormatBool(result.Err != ""),
-					strconv.FormatInt(result.Latency.Min, 10),
-					strconv.FormatInt(result.Latency.Q1, 10),
-					strconv.FormatInt(result.Latency.Q2, 10),
-					strconv.FormatInt(result.Latency.Q3, 10),
-					strconv.FormatInt(result.Latency.Max, 10),
-					strconv.FormatFloat(result.Latency.Mean, 'f', 3, 64),
-					strconv.FormatInt(result.Latency.Q3-result.Latency.Q1, 10),
-					strconv.FormatFloat(result.Latency.StdDev, 'f', 3, 64),
-				})
-				i++
-			}
-		}
-		printTable([]string{
-			"Consumer",
-			"Node",
-			"Error",
-			"Min",
-			"Q1",
-			"Q2",
-			"Q3",
-			"Max",
-			"Mean",
-			"IQR",
-			"Std Dev",
-		}, latencyData)
-	default:
-		panic(fmt.Sprintf("Invalid test: %s", client.Benchmark.Test))
 	}
+	printTable([]string{
+		"Consumer",
+		"Node",
+		"Error",
+		"Duration",
+		"Throughput (msg/sec)",
+		"Min",
+		"Q1",
+		"Q2",
+		"Q3",
+		"Max",
+		"Mean",
+		"IQR",
+		"Std Dev",
+	}, consumerData)
+	fmt.Println("All units ms unless noted otherwise")
 }
 
 func printTable(headers []string, data [][]string) {

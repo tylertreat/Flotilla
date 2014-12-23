@@ -13,12 +13,6 @@ import (
 
 type operation string
 type daemon string
-type Test string
-
-const (
-	Latency    Test = "latency"
-	Throughput Test = "throughput"
-)
 
 const (
 	start        operation = "start"
@@ -37,7 +31,6 @@ type request struct {
 	Port        string    `json:"port"`
 	NumMessages int       `json:"num_messages"`
 	MessageSize int64     `json:"message_size"`
-	Test        Test      `json:"test"`
 	Count       int       `json:"count"`
 	Host        string    `json:"host"`
 }
@@ -60,7 +53,6 @@ type Benchmark struct {
 	MessageSize int64
 	Publishers  int
 	Subscribers int
-	Test        Test
 }
 
 type Result struct {
@@ -168,7 +160,6 @@ func (c *Client) StartSubscribers() error {
 			Count:       c.Benchmark.Subscribers,
 			NumMessages: c.Benchmark.NumMessages,
 			MessageSize: c.Benchmark.MessageSize,
-			Test:        c.Benchmark.Test,
 		})
 
 		if err != nil {
@@ -191,7 +182,6 @@ func (c *Client) StartPublishers() error {
 			Count:       c.Benchmark.Publishers,
 			NumMessages: c.Benchmark.NumMessages,
 			MessageSize: c.Benchmark.MessageSize,
-			Test:        c.Benchmark.Test,
 		})
 
 		if err != nil {

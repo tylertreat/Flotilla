@@ -21,7 +21,6 @@ import (
 
 type daemon string
 type operation string
-type test string
 
 const (
 	start       operation = "start"
@@ -31,8 +30,6 @@ const (
 	pub         operation = "publishers"
 	results     operation = "results"
 	teardown    operation = "teardown"
-	latency     test      = "latency"
-	throughput  test      = "throughput"
 	NATS                  = "nats"
 	Beanstalkd            = "beanstalkd"
 	Kafka                 = "kafka"
@@ -49,7 +46,6 @@ type request struct {
 	Port        string    `json:"port"`
 	NumMessages int       `json:"num_messages"`
 	MessageSize int64     `json:"message_size"`
-	Test        test      `json:"test"`
 	Count       int       `json:"count"`
 	Host        string    `json:"host"`
 }
@@ -156,11 +152,9 @@ func (d *Daemon) processRequest(req request) response {
 	case stop:
 		response.Result, err = d.processBrokerStop()
 	case pub:
-		err = d.processPub(req.Broker, req.Host, req.Count, req.NumMessages,
-			req.MessageSize, req.Test)
+		err = d.processPub(req)
 	case sub:
-		err = d.processSub(req.Broker, req.Host, req.Count, req.NumMessages,
-			req.MessageSize, req.Test)
+		err = d.processSub(req)
 	case run:
 		err = d.processPublisherStart()
 	case results:
@@ -231,11 +225,9 @@ func (d *Daemon) processBrokerStop() (interface{}, error) {
 	return result, err
 }
 
-func (d *Daemon) processPub(broker, host string, count, numMessages int,
-	messageSize int64, test test) error {
-
-	for i := 0; i < count; i++ {
-		sender, err := d.newPeer(broker, host)
+func (d *Daemon) processPub(req request) error {
+	for i := 0; i < req.Count; i++ {
+		sender, err := d.newPeer(req.Broker, req.Host)
 		if err != nil {
 			return err
 		}
@@ -243,20 +235,17 @@ func (d *Daemon) processPub(broker, host string, count, numMessages int,
 		d.publishers = append(d.publishers, &publisher{
 			peer:        sender,
 			id:          i,
-			numMessages: numMessages,
-			messageSize: messageSize,
-			test:        test,
+			numMessages: req.NumMessages,
+			messageSize: req.MessageSize,
 		})
 	}
 
 	return nil
 }
 
-func (d *Daemon) processSub(broker, host string, count, numMessages int,
-	messageSize int64, test test) error {
-
-	for i := 0; i < count; i++ {
-		receiver, err := d.newPeer(broker, host)
+func (d *Daemon) processSub(req request) error {
+	for i := 0; i < req.Count; i++ {
+		receiver, err := d.newPeer(req.Broker, req.Host)
 		if err != nil {
 			return err
 		}
@@ -268,9 +257,8 @@ func (d *Daemon) processSub(broker, host string, count, numMessages int,
 		subscriber := &subscriber{
 			peer:        receiver,
 			id:          i,
-			numMessages: numMessages,
-			messageSize: messageSize,
-			test:        test,
+			numMessages: req.NumMessages,
+			messageSize: req.MessageSize,
 		}
 		d.subscribers = append(d.subscribers, subscriber)
 		go subscriber.start()
