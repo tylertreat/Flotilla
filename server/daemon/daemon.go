@@ -9,14 +9,14 @@ import (
 	"github.com/gdamore/mangos"
 	"github.com/gdamore/mangos/protocol/rep"
 	"github.com/gdamore/mangos/transport/tcp"
-	"github.com/tylertreat/flotilla/daemon/broker/activemq"
-	"github.com/tylertreat/flotilla/daemon/broker/amqp"
-	"github.com/tylertreat/flotilla/daemon/broker/beanstalkd"
-	"github.com/tylertreat/flotilla/daemon/broker/kafka"
-	"github.com/tylertreat/flotilla/daemon/broker/kestrel"
-	"github.com/tylertreat/flotilla/daemon/broker/nats"
-	"github.com/tylertreat/flotilla/daemon/broker/nsq"
-	"github.com/tylertreat/flotilla/daemon/broker/pubsub"
+	"github.com/tylertreat/flotilla/server/daemon/broker/activemq"
+	"github.com/tylertreat/flotilla/server/daemon/broker/amqp"
+	"github.com/tylertreat/flotilla/server/daemon/broker/beanstalkd"
+	"github.com/tylertreat/flotilla/server/daemon/broker/kafka"
+	"github.com/tylertreat/flotilla/server/daemon/broker/kestrel"
+	"github.com/tylertreat/flotilla/server/daemon/broker/nats"
+	"github.com/tylertreat/flotilla/server/daemon/broker/nsq"
+	"github.com/tylertreat/flotilla/server/daemon/broker/pubsub"
 )
 
 type daemon string

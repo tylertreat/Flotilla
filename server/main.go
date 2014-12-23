@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/tylertreat/flotilla/daemon"
+	"github.com/tylertreat/flotilla/server/daemon"
 )
 
 const defaultPort = 9000
