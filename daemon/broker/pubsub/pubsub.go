@@ -66,7 +66,6 @@ func (c *CloudPubSubPeer) Subscribe() error {
 				continue
 			}
 
-			fmt.Printf("got %d messages\n", len(messages))
 			ids := make([]string, len(messages))
 			for i, message := range messages {
 				ids[i] = message.AckID
