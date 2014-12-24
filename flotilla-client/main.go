@@ -6,7 +6,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/tylertreat/flotilla/flotilla-client/broker"
@@ -63,48 +62,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	runBenchmark(client)
-}
-
-func runBenchmark(client *broker.Client) {
-	fmt.Println("Starting broker - if the image hasn't been pulled yet, this may take a while...")
-	if err := client.StartBroker(); err != nil {
-		fmt.Println("Failed to start broker:", err)
+	results, err := client.RunBenchmark()
+	if err != nil {
 		os.Exit(1)
 	}
 
-	// Allow some time for broker startup.
-	time.Sleep(7 * time.Second)
-
-	fmt.Println("Preparing producers")
-	if err := client.StartPublishers(); err != nil {
-		fmt.Println("Failed to start producers:", err)
-		stopBroker(client)
-		os.Exit(1)
-	}
-
-	fmt.Println("Preparing consumers")
-	if err := client.StartSubscribers(); err != nil {
-		fmt.Println("Failed to start consumers:", err)
-		teardownPeers(client)
-		stopBroker(client)
-		os.Exit(1)
-	}
-
-	fmt.Println("Running benchmark")
-	if err := client.RunBenchmark(); err != nil {
-		fmt.Println("Failed to run benchmark:", err)
-		teardownPeers(client)
-		stopBroker(client)
-		os.Exit(1)
-	}
-
-	results := <-client.CollectResults()
 	printSummary(client.Benchmark)
 	printResults(results)
-
-	teardownPeers(client)
-	stopBroker(client)
 }
 
 func printSummary(benchmark *broker.Benchmark) {
@@ -121,7 +85,7 @@ func printSummary(benchmark *broker.Benchmark) {
 	fmt.Printf("Messages produced:  %d\n", msgSent)
 	fmt.Printf("Messages consumed:  %d\n", msgRecv)
 	fmt.Printf("Bytes per message:  %d\n", benchmark.MessageSize)
-	fmt.Printf("Data produced (kb): %d\n", dataSentKB)
+	fmt.Printf("Data produced (KB): %d\n", dataSentKB)
 	fmt.Printf("Data consumed (kb): %d\n", dataRecvKB)
 	fmt.Println("")
 }
@@ -197,18 +161,6 @@ func printTable(headers []string, data [][]string) {
 	}
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.Render()
-}
-
-func stopBroker(c *broker.Client) {
-	if err := c.StopBroker(); err != nil {
-		fmt.Println("Failed to stop broker:", err)
-	}
-}
-
-func teardownPeers(c *broker.Client) {
-	if err := c.Teardown(); err != nil {
-		fmt.Println("Failed to teardown peers:", err)
-	}
 }
 
 func brokerList() string {

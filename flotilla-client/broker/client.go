@@ -165,7 +165,39 @@ func NewClient(b *Benchmark) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) StartBroker() error {
+func (c *Client) RunBenchmark() ([]*ResultContainer, error) {
+	fmt.Println("Starting broker - if the image hasn't been pulled yet, this may take a while...")
+	if err := c.startBroker(); err != nil {
+		fmt.Println("Failed to start broker:", err)
+		return nil, err
+	}
+	defer c.teardown()
+
+	// Allow some time for broker startup.
+	time.Sleep(7 * time.Second)
+
+	fmt.Println("Preparing producers")
+	if err := c.startPublishers(); err != nil {
+		fmt.Println("Failed to start producers:", err)
+		return nil, err
+	}
+
+	fmt.Println("Preparing consumers")
+	if err := c.startSubscribers(); err != nil {
+		fmt.Println("Failed to start consumers:", err)
+		return nil, err
+	}
+
+	fmt.Println("Running benchmark")
+	if err := c.start(); err != nil {
+		fmt.Println("Failed to run benchmark:", err)
+		return nil, err
+	}
+
+	return <-c.collectResults(), nil
+}
+
+func (c *Client) startBroker() error {
 	resp, err := sendRequest(c.brokerd, request{
 		Operation: start,
 		Broker:    c.Benchmark.BrokerName,
@@ -184,20 +216,7 @@ func (c *Client) StartBroker() error {
 	return nil
 }
 
-func (c *Client) StopBroker() error {
-	resp, err := sendRequest(c.brokerd, request{Operation: stop})
-	if err != nil {
-		return err
-	}
-
-	if !resp.Success {
-		return errors.New(resp.Message)
-	}
-
-	return nil
-}
-
-func (c *Client) StartSubscribers() error {
+func (c *Client) startSubscribers() error {
 	for _, peerd := range c.peerd {
 		resp, err := sendRequest(peerd, request{
 			Operation:   sub,
@@ -219,7 +238,7 @@ func (c *Client) StartSubscribers() error {
 	return nil
 }
 
-func (c *Client) StartPublishers() error {
+func (c *Client) startPublishers() error {
 	for _, peerd := range c.peerd {
 		resp, err := sendRequest(peerd, request{
 			Operation:   pub,
@@ -241,7 +260,7 @@ func (c *Client) StartPublishers() error {
 	return nil
 }
 
-func (c *Client) RunBenchmark() error {
+func (c *Client) start() error {
 	for _, peerd := range c.peerd {
 		resp, err := sendRequest(peerd, request{Operation: run})
 		if err != nil {
@@ -255,7 +274,7 @@ func (c *Client) RunBenchmark() error {
 	return nil
 }
 
-func (c *Client) CollectResults() <-chan []*ResultContainer {
+func (c *Client) collectResults() <-chan []*ResultContainer {
 	resultsChan := make(chan []*ResultContainer, 1)
 
 	go func(chan<- []*ResultContainer) {
@@ -284,13 +303,31 @@ func (c *Client) CollectResults() <-chan []*ResultContainer {
 	return resultsChan
 }
 
-func (c *Client) Teardown() error {
+func (c *Client) teardown() {
+	fmt.Println("Tearing down peers")
 	for _, peerd := range c.peerd {
 		_, err := sendRequest(peerd, request{Operation: teardown})
 		if err != nil {
-			return err
+			fmt.Printf("Failed to teardown peer: %s\n", err.Error())
 		}
 	}
+
+	fmt.Println("Stopping broker")
+	if err := c.stopBroker(); err != nil {
+		fmt.Printf("Failed to stop broker: %s\n", err.Error())
+	}
+}
+
+func (c *Client) stopBroker() error {
+	resp, err := sendRequest(c.brokerd, request{Operation: stop})
+	if err != nil {
+		return err
+	}
+
+	if !resp.Success {
+		return errors.New(resp.Message)
+	}
+
 	return nil
 }
 
