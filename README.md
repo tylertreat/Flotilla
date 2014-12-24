@@ -65,7 +65,7 @@ Flotilla will run everything on localhost.
 
 ### Distributed Configuration
 
-With all daemon's started, run a benchmark using the client and provide the peers you wish to communicate with:
+With all daemons started, run a benchmark using the client and provide the peers you wish to communicate with:
 
 ```bash
 $ flotilla-client --broker=rabbitmq --host=<ip> --peer-hosts=<list of ips>
