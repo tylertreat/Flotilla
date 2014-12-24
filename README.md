@@ -98,3 +98,4 @@ $ flotilla-client --broker=rabbitmq --broker-host=$(boot2docker ip)
 - Many brokers support publishing batches of messages to boost throughput. Flotilla currently publishes a single message at a time as fast as possible, but this *hugely* affects throughput and typically doesn't reflect a production setting.
 - Some broker clients provide back-pressure heuristics. For example, NATS allows us to slow down publishing if it determines the receiver is falling behind. This greatly improves throughput.
 - Plottable data output.
+- Integration with [Comcast](https://github.com/tylertreat/Comcast) for testing under different network conditions.
