@@ -165,33 +165,28 @@ func NewClient(b *Benchmark) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) RunBenchmark() ([]*ResultContainer, error) {
+func (c *Client) Start() ([]*ResultContainer, error) {
 	fmt.Println("Starting broker - if the image hasn't been pulled yet, this may take a while...")
 	if err := c.startBroker(); err != nil {
-		fmt.Println("Failed to start broker:", err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to start broker: %s", err.Error())
 	}
-	defer c.teardown()
 
 	// Allow some time for broker startup.
 	time.Sleep(7 * time.Second)
 
 	fmt.Println("Preparing producers")
 	if err := c.startPublishers(); err != nil {
-		fmt.Println("Failed to start producers:", err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to start producers: %s", err.Error())
 	}
 
 	fmt.Println("Preparing consumers")
 	if err := c.startSubscribers(); err != nil {
-		fmt.Println("Failed to start consumers:", err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to start consumers %s:", err.Error())
 	}
 
 	fmt.Println("Running benchmark")
-	if err := c.start(); err != nil {
-		fmt.Println("Failed to run benchmark:", err)
-		return nil, err
+	if err := c.runBenchmark(); err != nil {
+		return nil, fmt.Errorf("Failed to run benchmark %s:", err.Error())
 	}
 
 	return <-c.collectResults(), nil
@@ -260,7 +255,7 @@ func (c *Client) startPublishers() error {
 	return nil
 }
 
-func (c *Client) start() error {
+func (c *Client) runBenchmark() error {
 	for _, peerd := range c.peerd {
 		resp, err := sendRequest(peerd, request{Operation: run})
 		if err != nil {
@@ -303,7 +298,7 @@ func (c *Client) collectResults() <-chan []*ResultContainer {
 	return resultsChan
 }
 
-func (c *Client) teardown() {
+func (c *Client) Teardown() {
 	fmt.Println("Tearing down peers")
 	for _, peerd := range c.peerd {
 		_, err := sendRequest(peerd, request{Operation: teardown})

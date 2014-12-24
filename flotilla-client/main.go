@@ -4,8 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/tylertreat/flotilla/flotilla-client/broker"
@@ -62,13 +64,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	results, err := client.RunBenchmark()
+	results, err := runBenchmark(client)
 	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	printSummary(client.Benchmark)
 	printResults(results)
+}
+
+func runBenchmark(client *broker.Client) ([]*broker.ResultContainer, error) {
+	defer client.Teardown()
+	sig := make(chan os.Signal, 2)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sig
+		client.Teardown()
+		os.Exit(1)
+	}()
+
+	return client.Start()
 }
 
 func printSummary(benchmark *broker.Benchmark) {
