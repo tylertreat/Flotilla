@@ -17,7 +17,7 @@ flotilla-client \
 
 In addition to simulating more realistic testing scenarios, Flotilla also tries to offer more statistically meaningful results in the benchmarking itself. It relies on [HDR Histogram](http://hdrhistogram.github.io/HdrHistogram/) (or rather a [Go variant](https://github.com/codahale/hdrhistogram) of it) which supports recording and analyzing sampled data value counts at extremely low latencies. See the "Caveats" section below for potential benchmarking issues and areas for improvement.
 
-It supports several message brokers out of the box:
+Flotilla supports several message brokers out of the box:
 
 - [Beanstalkd](http://kr.github.io/beanstalkd/)
 - [NATS](http://nats.io/)
@@ -65,7 +65,7 @@ Flotilla will run everything on localhost.
 
 ### Distributed Configuration
 
-With all daemon's started, run a benchmark using the client and provide the peers you wish to communicate with:
+With all daemons started, run a benchmark using the client and provide the peers you wish to communicate with:
 
 ```bash
 $ flotilla-client --broker=rabbitmq --host=<ip> --peer-hosts=<list of ips>
@@ -98,3 +98,4 @@ $ flotilla-client --broker=rabbitmq --broker-host=$(boot2docker ip)
 - Many brokers support publishing batches of messages to boost throughput. Flotilla currently publishes a single message at a time as fast as possible, but this *hugely* affects throughput and typically doesn't reflect a production setting.
 - Some broker clients provide back-pressure heuristics. For example, NATS allows us to slow down publishing if it determines the receiver is falling behind. This greatly improves throughput.
 - Plottable data output.
+- Integration with [Comcast](https://github.com/tylertreat/Comcast) for testing under different network conditions.
