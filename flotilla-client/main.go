@@ -102,7 +102,7 @@ func printSummary(benchmark *broker.Benchmark) {
 	fmt.Printf("Messages consumed:  %d\n", msgRecv)
 	fmt.Printf("Bytes per message:  %d\n", benchmark.MessageSize)
 	fmt.Printf("Data produced (KB): %d\n", dataSentKB)
-	fmt.Printf("Data consumed (kb): %d\n", dataRecvKB)
+	fmt.Printf("Data consumed (KB): %d\n", dataRecvKB)
 	fmt.Println("")
 }
 
