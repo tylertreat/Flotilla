@@ -7,7 +7,7 @@ import (
 	"github.com/tylertreat/flotilla/flotilla-server/daemon"
 )
 
-const defaultPort = 9000
+const defaultPort = 9500
 
 func main() {
 	var (
