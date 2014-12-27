@@ -137,6 +137,7 @@ func NewClient(b *Benchmark) (*Client, error) {
 	}
 
 	brokerd.AddTransport(tcp.NewTransport())
+	// TODO: Set send/recv timeout.
 
 	if err := brokerd.Dial(fmt.Sprintf("tcp://%s", b.BrokerdHost)); err != nil {
 		return nil, err
@@ -150,6 +151,7 @@ func NewClient(b *Benchmark) (*Client, error) {
 		}
 
 		s.AddTransport(tcp.NewTransport())
+		// TODO: Set send/recv timeout.
 
 		if err := s.Dial(fmt.Sprintf("tcp://%s", peer)); err != nil {
 			return nil, err
