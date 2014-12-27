@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/tylertreat/flotilla/flotilla-client/broker"
@@ -64,13 +65,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	start := time.Now()
 	results, err := runBenchmark(client)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	elapsed := time.Since(start)
 
-	printSummary(client.Benchmark)
+	printSummary(client.Benchmark, elapsed)
 	printResults(results)
 }
 
@@ -87,13 +90,14 @@ func runBenchmark(client *broker.Client) ([]*broker.ResultContainer, error) {
 	return client.Start()
 }
 
-func printSummary(benchmark *broker.Benchmark) {
+func printSummary(benchmark *broker.Benchmark, elapsed time.Duration) {
 	brokerHost := strings.Split(benchmark.BrokerdHost, ":")[0] + ":" + benchmark.BrokerPort
 	msgSent := int(benchmark.NumMessages) * len(benchmark.PeerHosts) * int(benchmark.Publishers)
 	msgRecv := int(benchmark.NumMessages) * len(benchmark.PeerHosts) * int(benchmark.Subscribers)
 	dataSentKB := (msgSent * int(benchmark.MessageSize)) / 1000
 	dataRecvKB := (msgRecv * int(benchmark.MessageSize)) / 1000
 	fmt.Println("\nTEST SUMMARY\n")
+	fmt.Printf("Time Elapsed:       %s\n", elapsed.String())
 	fmt.Printf("Broker:             %s (%s)\n", benchmark.BrokerName, brokerHost)
 	fmt.Printf("Nodes:              %s\n", benchmark.PeerHosts)
 	fmt.Printf("Producers per node: %d\n", benchmark.Publishers)
