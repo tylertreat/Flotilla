@@ -97,5 +97,6 @@ $ flotilla-client --broker=rabbitmq --broker-host=$(boot2docker ip)
 - Many message brokers, such as Kafka, are designed to operate in a clustered configuration for higher availability. Add support for these types of topologies. This gets us closer to what would be deployed in production.
 - Many brokers support publishing batches of messages to boost throughput. Flotilla currently publishes a single message at a time as fast as possible, but this *hugely* affects throughput and typically doesn't reflect a production setting.
 - Some broker clients provide back-pressure heuristics. For example, NATS allows us to slow down publishing if it determines the receiver is falling behind. This greatly improves throughput.
+- Replace use of `os/exec` with Docker REST API (how does this work with boot2docker?)
 - Plottable data output.
 - Integration with [Comcast](https://github.com/tylertreat/Comcast) for testing under different network conditions.
