@@ -1,0 +1,6 @@
+#!/bin/bash
+
+location="bin/gp-darwin-amd64"
+[ -d "/proc" ] && location="bin/gp-linux-amd64"
+
+$location version
