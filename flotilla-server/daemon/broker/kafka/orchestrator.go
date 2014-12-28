@@ -13,7 +13,8 @@ const (
 	kafka         = "ches/kafka"
 	kafkaPort     = "9092"
 	jmxPort       = "7203"
-	kafkaCmd      = `docker run -d \
+	// TODO: Use --link.
+	kafkaCmd = `docker run -d \
 	                     -h %s \
 	                     -p %s:%s -p %s:%s \
 	                     -e EXPOSED_HOST=%s \
