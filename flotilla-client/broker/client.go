@@ -46,15 +46,16 @@ type response struct {
 }
 
 type Benchmark struct {
-	BrokerdHost string
-	BrokerName  string
-	BrokerHost  string
-	BrokerPort  string
-	PeerHosts   []string
-	NumMessages uint
-	MessageSize uint64
-	Publishers  uint
-	Subscribers uint
+	BrokerdHost  string
+	BrokerName   string
+	BrokerHost   string
+	BrokerPort   string
+	PeerHosts    []string
+	NumMessages  uint
+	MessageSize  uint64
+	Publishers   uint
+	Subscribers  uint
+	StartupSleep uint
 }
 
 func (b *Benchmark) validate() error {
@@ -174,7 +175,7 @@ func (c *Client) Start() ([]*ResultContainer, error) {
 	}
 
 	// Allow some time for broker startup.
-	time.Sleep(7 * time.Second)
+	time.Sleep(time.Duration(c.Benchmark.StartupSleep) * time.Second)
 
 	fmt.Println("Preparing producers")
 	if err := c.startPublishers(); err != nil {
