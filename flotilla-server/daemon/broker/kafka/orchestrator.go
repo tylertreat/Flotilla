@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"time"
 )
 
 const (
@@ -50,6 +51,12 @@ func (k *KafkaBroker) Start(host, port string) (interface{}, error) {
 	log.Printf("Started container %s: %s", kafka, kafkaContainerID)
 	k.kafkaContainerID = string(kafkaContainerID)
 	k.zookeeperContainerID = string(zkContainerID)
+
+	// NOTE: Leader election can take a while. For now, just sleep to try to
+	// ensure the cluster is ready. Is there a way to avoid this or make it
+	// better?
+	time.Sleep(time.Minute)
+
 	return string(kafkaContainerID), nil
 }
 
