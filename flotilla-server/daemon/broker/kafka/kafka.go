@@ -9,7 +9,6 @@ import (
 const topic = "test"
 
 type KafkaPeer struct {
-	host     string
 	client   *sarama.Client
 	producer *sarama.Producer
 	consumer *sarama.Consumer
@@ -30,7 +29,6 @@ func NewKafkaPeer(host string) (*KafkaPeer, error) {
 	return &KafkaPeer{
 		client:   client,
 		producer: producer,
-		host:     host,
 	}, nil
 }
 
