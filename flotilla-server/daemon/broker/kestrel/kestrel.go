@@ -10,16 +10,17 @@ import (
 
 const (
 	queue      = "test"
-	bufferSize = 5
+	bufferSize = 10
 )
 
 type KestrelPeer struct {
-	client   *kestrel.Client
-	messages chan []byte
-	send     chan []byte
-	errors   chan error
-	done     chan bool
-	flush    chan bool
+	client     *kestrel.Client
+	messages   chan []byte
+	send       chan []byte
+	errors     chan error
+	done       chan bool
+	flush      chan bool
+	subscriber bool
 }
 
 func NewKestrelPeer(host string) (*KestrelPeer, error) {
@@ -43,13 +44,14 @@ func NewKestrelPeer(host string) (*KestrelPeer, error) {
 		client:   client,
 		messages: make(chan []byte, 10000),
 		send:     make(chan []byte),
-		errors:   make(chan error),
+		errors:   make(chan error, 1),
 		done:     make(chan bool, 1),
 		flush:    make(chan bool),
 	}, nil
 }
 
 func (k *KestrelPeer) Subscribe() error {
+	k.subscriber = true
 	go func() {
 		for {
 			// TODO: Probably tweak the max items number.
@@ -108,6 +110,8 @@ func (k *KestrelPeer) Setup() {
 
 func (k *KestrelPeer) Teardown() {
 	k.done <- true
-	<-k.flush
+	if !k.subscriber {
+		<-k.flush
+	}
 	k.client.Close()
 }
