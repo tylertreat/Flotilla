@@ -75,6 +75,7 @@ type peer interface {
 	Recv() ([]byte, error)
 	Send() chan<- []byte
 	Errors() <-chan error
+	Done()
 	Setup()
 	Teardown()
 }

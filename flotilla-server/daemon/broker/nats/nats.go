@@ -42,8 +42,8 @@ func NewNATSPeer(host string) (*NATSPeer, error) {
 		conn:     conn,
 		messages: make(chan []byte, 10000),
 		send:     make(chan []byte),
-		errors:   make(chan error),
-		done:     make(chan bool, 1),
+		errors:   make(chan error, 1),
+		done:     make(chan bool),
 	}, nil
 }
 
@@ -64,6 +64,10 @@ func (n *NATSPeer) Send() chan<- []byte {
 
 func (n *NATSPeer) Errors() <-chan error {
 	return n.errors
+}
+
+func (n *NATSPeer) Done() {
+	n.done <- true
 }
 
 func (n *NATSPeer) Setup() {
@@ -97,6 +101,5 @@ func (n *NATSPeer) sendMessage(message []byte) error {
 }
 
 func (n *NATSPeer) Teardown() {
-	n.done <- true
 	n.conn.Close()
 }

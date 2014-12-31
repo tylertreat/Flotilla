@@ -24,8 +24,8 @@ func NewBeanstalkdPeer(host string) (*BeanstalkdPeer, error) {
 		conn:     conn,
 		messages: make(chan []byte, 10000),
 		send:     make(chan []byte),
-		errors:   make(chan error),
-		done:     make(chan bool, 1),
+		errors:   make(chan error, 1),
+		done:     make(chan bool),
 	}, nil
 }
 
@@ -57,6 +57,10 @@ func (b *BeanstalkdPeer) Errors() <-chan error {
 	return b.errors
 }
 
+func (b *BeanstalkdPeer) Done() {
+	b.done <- true
+}
+
 func (b *BeanstalkdPeer) Setup() {
 	go func() {
 		for {
@@ -73,6 +77,5 @@ func (b *BeanstalkdPeer) Setup() {
 }
 
 func (b *BeanstalkdPeer) Teardown() {
-	b.done <- true
 	b.conn.Close()
 }

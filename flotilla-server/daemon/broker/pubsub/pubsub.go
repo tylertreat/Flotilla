@@ -14,7 +14,7 @@ import (
 
 const (
 	stopped    = 1
-	bufferSize = 5
+	bufferSize = 10
 )
 
 type CloudPubSubPeer struct {
@@ -42,8 +42,8 @@ func NewCloudPubSubPeer(projectID, jsonKey string) (*CloudPubSubPeer, error) {
 		acks:     make(chan []string, 100),
 		ackDone:  make(chan bool, 1),
 		send:     make(chan []byte),
-		errors:   make(chan error),
-		done:     make(chan bool, 1),
+		errors:   make(chan error, 1),
+		done:     make(chan bool),
 		flush:    make(chan bool),
 	}, nil
 }
@@ -100,6 +100,11 @@ func (c *CloudPubSubPeer) Errors() <-chan error {
 	return c.errors
 }
 
+func (c *CloudPubSubPeer) Done() {
+	c.done <- true
+	<-c.flush
+}
+
 func (c *CloudPubSubPeer) Setup() {
 	buffer := make([]*pubsub.Message, bufferSize)
 	go func() {
@@ -129,8 +134,6 @@ func (c *CloudPubSubPeer) Setup() {
 }
 
 func (c *CloudPubSubPeer) Teardown() {
-	c.done <- true
-	<-c.flush
 	atomic.StoreInt32(&c.stopped, stopped)
 	c.ackDone <- true
 	pubsub.DeleteSub(c.context, c.subscription)

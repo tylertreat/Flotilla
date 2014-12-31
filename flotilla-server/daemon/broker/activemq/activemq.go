@@ -21,8 +21,8 @@ func NewActiveMQPeer(host string) (*ActiveMQPeer, error) {
 	return &ActiveMQPeer{
 		conn:   conn,
 		send:   make(chan []byte),
-		errors: make(chan error),
-		done:   make(chan bool, 1),
+		errors: make(chan error, 1),
+		done:   make(chan bool),
 	}, nil
 }
 
@@ -49,6 +49,10 @@ func (a *ActiveMQPeer) Errors() <-chan error {
 	return a.errors
 }
 
+func (a *ActiveMQPeer) Done() {
+	a.done <- true
+}
+
 func (a *ActiveMQPeer) Setup() {
 	go func() {
 		for {
@@ -65,7 +69,6 @@ func (a *ActiveMQPeer) Setup() {
 }
 
 func (a *ActiveMQPeer) Teardown() {
-	a.done <- true
 	if a.sub != nil {
 		a.sub.Unsubscribe()
 	}

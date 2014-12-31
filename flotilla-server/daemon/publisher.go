@@ -19,12 +19,15 @@ type publisher struct {
 
 func (p *publisher) start() {
 	p.Setup()
+	defer p.Done()
+
 	var (
 		send    = p.Send()
 		errors  = p.Errors()
 		message = make([]byte, p.messageSize)
 		start   = time.Now().UnixNano()
 	)
+
 	for i := 0; i < p.numMessages; i++ {
 		binary.PutVarint(message, time.Now().UnixNano())
 		select {

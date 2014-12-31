@@ -33,8 +33,8 @@ func NewKafkaPeer(host string) (*KafkaPeer, error) {
 		client:   client,
 		producer: producer,
 		send:     make(chan []byte),
-		errors:   make(chan error),
-		done:     make(chan bool, 1),
+		errors:   make(chan error, 1),
+		done:     make(chan bool),
 	}, nil
 }
 
@@ -66,6 +66,10 @@ func (k *KafkaPeer) Errors() <-chan error {
 	return k.errors
 }
 
+func (k *KafkaPeer) Done() {
+	k.done <- true
+}
+
 func (k *KafkaPeer) Setup() {
 	go func() {
 		for {
@@ -91,7 +95,6 @@ func (k *KafkaPeer) sendMessage(message []byte) error {
 }
 
 func (k *KafkaPeer) Teardown() {
-	k.done <- true
 	k.producer.Close()
 	if k.consumer != nil {
 		k.consumer.Close()

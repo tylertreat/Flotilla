@@ -60,8 +60,8 @@ func NewAMQPPeer(host string) (*AMQPPeer, error) {
 		queue:   queue,
 		channel: channel,
 		send:    make(chan []byte),
-		errors:  make(chan error),
-		done:    make(chan bool, 1),
+		errors:  make(chan error, 1),
+		done:    make(chan bool),
 	}, nil
 }
 
@@ -106,6 +106,10 @@ func (a *AMQPPeer) Errors() <-chan error {
 	return a.errors
 }
 
+func (a *AMQPPeer) Done() {
+	a.done <- true
+}
+
 func (a *AMQPPeer) Setup() {
 	go func() {
 		for {
@@ -128,7 +132,6 @@ func (a *AMQPPeer) Setup() {
 }
 
 func (a *AMQPPeer) Teardown() {
-	a.done <- true
 	a.channel.Close()
 	a.conn.Close()
 }

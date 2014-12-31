@@ -32,8 +32,8 @@ func NewNSQPeer(host string) (*NSQPeer, error) {
 		producer: producer,
 		messages: make(chan []byte, 10000),
 		send:     make(chan []byte),
-		errors:   make(chan error),
-		done:     make(chan bool, 1),
+		errors:   make(chan error, 1),
+		done:     make(chan bool),
 		flush:    make(chan bool),
 	}, nil
 }
@@ -69,6 +69,11 @@ func (n *NSQPeer) Errors() <-chan error {
 	return n.errors
 }
 
+func (n *NSQPeer) Done() {
+	n.done <- true
+	<-n.flush
+}
+
 func (n *NSQPeer) Setup() {
 	buffer := make([][]byte, bufferSize)
 	go func() {
@@ -99,8 +104,6 @@ func (n *NSQPeer) Setup() {
 }
 
 func (n *NSQPeer) Teardown() {
-	n.done <- true
-	<-n.flush
 	n.producer.Stop()
 	if n.consumer != nil {
 		n.consumer.DisconnectFromNSQD(n.host)

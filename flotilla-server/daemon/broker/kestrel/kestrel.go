@@ -9,8 +9,11 @@ import (
 )
 
 const (
-	queue      = "test"
-	bufferSize = 10
+	queue = "test"
+
+	// bufferSize is the number of messages we try to publish and consume at a
+	// time to increase throughput. TODO: this might need tweaking.
+	bufferSize = 100
 )
 
 type KestrelPeer struct {
@@ -45,7 +48,7 @@ func NewKestrelPeer(host string) (*KestrelPeer, error) {
 		messages: make(chan []byte, 10000),
 		send:     make(chan []byte),
 		errors:   make(chan error, 1),
-		done:     make(chan bool, 1),
+		done:     make(chan bool),
 		flush:    make(chan bool),
 	}, nil
 }
@@ -54,8 +57,7 @@ func (k *KestrelPeer) Subscribe() error {
 	k.subscriber = true
 	go func() {
 		for {
-			// TODO: Probably tweak the max items number.
-			items, err := k.client.Get(queue, 500, 0, 0)
+			items, err := k.client.Get(queue, bufferSize, 0, 0)
 			if err != nil {
 				// Broker shutdown.
 				return
@@ -78,6 +80,11 @@ func (k *KestrelPeer) Send() chan<- []byte {
 
 func (k *KestrelPeer) Errors() <-chan error {
 	return k.errors
+}
+
+func (k *KestrelPeer) Done() {
+	k.done <- true
+	<-k.flush
 }
 
 func (k *KestrelPeer) Setup() {
@@ -109,9 +116,5 @@ func (k *KestrelPeer) Setup() {
 }
 
 func (k *KestrelPeer) Teardown() {
-	k.done <- true
-	if !k.subscriber {
-		<-k.flush
-	}
 	k.client.Close()
 }
