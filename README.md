@@ -79,23 +79,23 @@ $ flotilla-client --help
 
 ### Running on OSX
 
-Flotilla starts most brokers using a Docker container. This can be achieved on OSX using boot2docker, which runs the container in a VM. The daemon needs to know the address of the VM. This can be provided from the client using the `--broker-host` flag, which specifies the host machine (or VM, in this case) the broker will run on.
+Flotilla starts most brokers using a Docker container. This can be achieved on OSX using boot2docker, which runs the container in a VM. The daemon needs to know the address of the VM. This can be provided from the client using the `--docker-host` flag, which specifies the host machine (or VM, in this case) the broker will run on.
 
 ```bash
-$ flotilla-client --broker=rabbitmq --broker-host=$(boot2docker ip)
+$ flotilla-client --broker=rabbitmq --docker-host=$(boot2docker ip)
 ```
 
 ## Caveats
 
 - *Not all brokers are created equal.* Flotilla is designed to make it easy to test drive different messaging systems, but comparing results between them can often be misguided.
+- Several brokers support publishing batches of messages to boost throughput (with a latency penalty). Some brokers don't support batching, so messages are published one at a time for these. This greatly affects throughput.
 - The latency of a message is measured as the time it's sent subtracted from the time it's received. This requires recording the clocks of both the sender and receiver. If you're running scaled-up, *distributed* tests, then the clocks aren't perfectly synchronized. *These benchmarks aren't perfect.*
-- Related to the second point, measuring *anything* requires some computational overhead, which affects results. HDR Histogram tries to minimize this problem but can't remove it altogether.
+- Related to the above point, measuring *anything* requires some computational overhead, which affects results. HDR Histogram tries to minimize this problem but can't remove it altogether.
 - There is currently no security built in. Use this tool *at your own risk*. The daemon runs on port 9500 by default.
 
 ## TODO
 
 - Many message brokers, such as Kafka, are designed to operate in a clustered configuration for higher availability. Add support for these types of topologies. This gets us closer to what would be deployed in production.
-- Many brokers support publishing batches of messages to boost throughput. Flotilla currently publishes a single message at a time as fast as possible, but this *hugely* affects throughput and typically doesn't reflect a production setting.
 - Some broker clients provide back-pressure heuristics. For example, NATS allows us to slow down publishing if it determines the receiver is falling behind. This greatly improves throughput.
 - Replace use of `os/exec` with Docker REST API (how does this work with boot2docker?)
 - Plottable data output.
