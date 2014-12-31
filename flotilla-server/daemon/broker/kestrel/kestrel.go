@@ -8,11 +8,22 @@ import (
 	"github.com/alindeman/go-kestrel"
 )
 
-const queue = "test"
+const (
+	queue = "test"
+
+	// bufferSize is the number of messages we try to publish and consume at a
+	// time to increase throughput. TODO: this might need tweaking.
+	bufferSize = 100
+)
 
 type KestrelPeer struct {
-	client   *kestrel.Client
-	messages chan []byte
+	client     *kestrel.Client
+	messages   chan []byte
+	send       chan []byte
+	errors     chan error
+	done       chan bool
+	flush      chan bool
+	subscriber bool
 }
 
 func NewKestrelPeer(host string) (*KestrelPeer, error) {
@@ -35,14 +46,18 @@ func NewKestrelPeer(host string) (*KestrelPeer, error) {
 	return &KestrelPeer{
 		client:   client,
 		messages: make(chan []byte, 10000),
+		send:     make(chan []byte),
+		errors:   make(chan error, 1),
+		done:     make(chan bool),
+		flush:    make(chan bool),
 	}, nil
 }
 
 func (k *KestrelPeer) Subscribe() error {
+	k.subscriber = true
 	go func() {
 		for {
-			// TODO: Probably tweak the max items number.
-			items, err := k.client.Get(queue, 500, 0, 0)
+			items, err := k.client.Get(queue, bufferSize, 0, 0)
 			if err != nil {
 				// Broker shutdown.
 				return
@@ -59,9 +74,45 @@ func (k *KestrelPeer) Recv() ([]byte, error) {
 	return <-k.messages, nil
 }
 
-func (k *KestrelPeer) Send(message []byte) error {
-	_, err := k.client.Put(queue, [][]byte{message})
-	return err
+func (k *KestrelPeer) Send() chan<- []byte {
+	return k.send
+}
+
+func (k *KestrelPeer) Errors() <-chan error {
+	return k.errors
+}
+
+func (k *KestrelPeer) Done() {
+	k.done <- true
+	<-k.flush
+}
+
+func (k *KestrelPeer) Setup() {
+	buffer := make([][]byte, bufferSize)
+	go func() {
+		i := 0
+		for {
+			select {
+			case msg := <-k.send:
+				buffer[i] = msg
+				i++
+				if i == bufferSize {
+					if _, err := k.client.Put(queue, buffer); err != nil {
+						k.errors <- err
+					}
+					i = 0
+				}
+			case <-k.done:
+				if i > 0 {
+					if _, err := k.client.Put(queue, buffer[0:i]); err != nil {
+						k.errors <- err
+					}
+				}
+				k.flush <- true
+				return
+			}
+		}
+	}()
 }
 
 func (k *KestrelPeer) Teardown() {

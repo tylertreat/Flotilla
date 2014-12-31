@@ -5,13 +5,23 @@ import (
 	"github.com/tylertreat/Flotilla/flotilla-server/daemon/broker"
 )
 
-const topic = "test"
+const (
+	topic = "test"
+
+	// bufferSize is the number of messages we try to publish at a time to
+	// increase throughput. TODO: this might need tweaking.
+	bufferSize = 50
+)
 
 type NSQPeer struct {
 	producer *nsq.Producer
 	consumer *nsq.Consumer
 	host     string
 	messages chan []byte
+	send     chan []byte
+	errors   chan error
+	done     chan bool
+	flush    chan bool
 }
 
 func NewNSQPeer(host string) (*NSQPeer, error) {
@@ -24,6 +34,10 @@ func NewNSQPeer(host string) (*NSQPeer, error) {
 		host:     host,
 		producer: producer,
 		messages: make(chan []byte, 10000),
+		send:     make(chan []byte),
+		errors:   make(chan error, 1),
+		done:     make(chan bool),
+		flush:    make(chan bool),
 	}, nil
 }
 
@@ -50,8 +64,46 @@ func (n *NSQPeer) Recv() ([]byte, error) {
 	return <-n.messages, nil
 }
 
-func (n *NSQPeer) Send(message []byte) error {
-	return n.producer.PublishAsync(topic, message, nil)
+func (n *NSQPeer) Send() chan<- []byte {
+	return n.send
+}
+
+func (n *NSQPeer) Errors() <-chan error {
+	return n.errors
+}
+
+func (n *NSQPeer) Done() {
+	n.done <- true
+	<-n.flush
+}
+
+func (n *NSQPeer) Setup() {
+	buffer := make([][]byte, bufferSize)
+	go func() {
+		i := 0
+		for {
+			select {
+			case msg := <-n.send:
+				buffer[i] = msg
+				i++
+				if i == bufferSize {
+					if err := n.producer.MultiPublishAsync(topic, buffer, nil, nil); err != nil {
+						n.errors <- err
+					}
+					i = 0
+				}
+			case <-n.done:
+				if i > 0 {
+					if err := n.producer.MultiPublishAsync(topic, buffer[0:i], nil, nil); err != nil {
+						n.errors <- err
+					}
+				}
+				n.flush <- true
+				return
+			}
+		}
+	}()
+
 }
 
 func (n *NSQPeer) Teardown() {

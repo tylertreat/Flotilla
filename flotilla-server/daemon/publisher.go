@@ -18,11 +18,25 @@ type publisher struct {
 }
 
 func (p *publisher) start() {
-	message := make([]byte, p.messageSize)
-	start := time.Now().UnixNano()
+	p.Setup()
+	defer p.Done()
+
+	var (
+		send    = p.Send()
+		errors  = p.Errors()
+		message = make([]byte, p.messageSize)
+		start   = time.Now().UnixNano()
+	)
+
 	for i := 0; i < p.numMessages; i++ {
 		binary.PutVarint(message, time.Now().UnixNano())
-		if err := p.Send(message); err != nil {
+		select {
+		case send <- message:
+			continue
+		case err := <-errors:
+			// TODO: If a publish fails, a subscriber will probably deadlock.
+			// The best option is probably to signal back to the client that
+			// a publisher failed so it can orchestrate a shutdown.
 			log.Printf("Failed to send message: %s", err.Error())
 			p.mu.Lock()
 			p.results = &result{Err: err.Error()}

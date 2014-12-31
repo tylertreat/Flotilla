@@ -12,6 +12,9 @@ type KafkaPeer struct {
 	client   *sarama.Client
 	producer *sarama.Producer
 	consumer *sarama.Consumer
+	send     chan []byte
+	errors   chan error
+	done     chan bool
 }
 
 func NewKafkaPeer(host string) (*KafkaPeer, error) {
@@ -29,6 +32,9 @@ func NewKafkaPeer(host string) (*KafkaPeer, error) {
 	return &KafkaPeer{
 		client:   client,
 		producer: producer,
+		send:     make(chan []byte),
+		errors:   make(chan error, 1),
+		done:     make(chan bool),
 	}, nil
 }
 
@@ -52,7 +58,34 @@ func (k *KafkaPeer) Recv() ([]byte, error) {
 	return event.Value, nil
 }
 
-func (k *KafkaPeer) Send(message []byte) error {
+func (k *KafkaPeer) Send() chan<- []byte {
+	return k.send
+}
+
+func (k *KafkaPeer) Errors() <-chan error {
+	return k.errors
+}
+
+func (k *KafkaPeer) Done() {
+	k.done <- true
+}
+
+func (k *KafkaPeer) Setup() {
+	go func() {
+		for {
+			select {
+			case msg := <-k.send:
+				if err := k.sendMessage(msg); err != nil {
+					k.errors <- err
+				}
+			case <-k.done:
+				return
+			}
+		}
+	}()
+}
+
+func (k *KafkaPeer) sendMessage(message []byte) error {
 	select {
 	case k.producer.Input() <- &sarama.MessageToSend{Topic: topic, Key: nil, Value: sarama.ByteEncoder(message)}:
 		return nil

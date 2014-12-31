@@ -9,6 +9,9 @@ import (
 type BeanstalkdPeer struct {
 	conn     *beanstalk.Conn
 	messages chan []byte
+	send     chan []byte
+	errors   chan error
+	done     chan bool
 }
 
 func NewBeanstalkdPeer(host string) (*BeanstalkdPeer, error) {
@@ -20,6 +23,9 @@ func NewBeanstalkdPeer(host string) (*BeanstalkdPeer, error) {
 	return &BeanstalkdPeer{
 		conn:     conn,
 		messages: make(chan []byte, 10000),
+		send:     make(chan []byte),
+		errors:   make(chan error, 1),
+		done:     make(chan bool),
 	}, nil
 }
 
@@ -43,9 +49,31 @@ func (b *BeanstalkdPeer) Recv() ([]byte, error) {
 	return <-b.messages, nil
 }
 
-func (b *BeanstalkdPeer) Send(message []byte) error {
-	_, err := b.conn.Put(message, 1, 0, 0)
-	return err
+func (b *BeanstalkdPeer) Send() chan<- []byte {
+	return b.send
+}
+
+func (b *BeanstalkdPeer) Errors() <-chan error {
+	return b.errors
+}
+
+func (b *BeanstalkdPeer) Done() {
+	b.done <- true
+}
+
+func (b *BeanstalkdPeer) Setup() {
+	go func() {
+		for {
+			select {
+			case msg := <-b.send:
+				if _, err := b.conn.Put(msg, 1, 0, 0); err != nil {
+					b.errors <- err
+				}
+			case <-b.done:
+				return
+			}
+		}
+	}()
 }
 
 func (b *BeanstalkdPeer) Teardown() {

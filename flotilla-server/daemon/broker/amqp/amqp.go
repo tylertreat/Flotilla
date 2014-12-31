@@ -14,6 +14,9 @@ type AMQPPeer struct {
 	queue   amqp.Queue
 	channel *amqp.Channel
 	inbound <-chan amqp.Delivery
+	send    chan []byte
+	errors  chan error
+	done    chan bool
 }
 
 func NewAMQPPeer(host string) (*AMQPPeer, error) {
@@ -56,6 +59,9 @@ func NewAMQPPeer(host string) (*AMQPPeer, error) {
 		conn:    conn,
 		queue:   queue,
 		channel: channel,
+		send:    make(chan []byte),
+		errors:  make(chan error, 1),
+		done:    make(chan bool),
 	}, nil
 }
 
@@ -92,14 +98,37 @@ func (a *AMQPPeer) Recv() ([]byte, error) {
 	return message.Body, nil
 }
 
-func (a *AMQPPeer) Send(message []byte) error {
-	return a.channel.Publish(
-		exchange, // exchange
-		"",       // routing key
-		false,    // mandatory
-		false,    // immediate
-		amqp.Publishing{Body: message},
-	)
+func (a *AMQPPeer) Send() chan<- []byte {
+	return a.send
+}
+
+func (a *AMQPPeer) Errors() <-chan error {
+	return a.errors
+}
+
+func (a *AMQPPeer) Done() {
+	a.done <- true
+}
+
+func (a *AMQPPeer) Setup() {
+	go func() {
+		for {
+			select {
+			case msg := <-a.send:
+				if err := a.channel.Publish(
+					exchange, // exchange
+					"",       // routing key
+					false,    // mandatory
+					false,    // immediate
+					amqp.Publishing{Body: msg},
+				); err != nil {
+					a.errors <- err
+				}
+			case <-a.done:
+				return
+			}
+		}
+	}()
 }
 
 func (a *AMQPPeer) Teardown() {
