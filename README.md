@@ -88,7 +88,7 @@ $ flotilla-client --broker=rabbitmq --docker-host=$(boot2docker ip)
 ## Caveats
 
 - *Not all brokers are created equal.* Flotilla is designed to make it easy to test drive different messaging systems, but comparing results between them can often be misguided.
-- Several brokers support publishing batches of messages to boost throughput (with a latency penalty). Some brokers don't support batching, so messages are published one at a time for these. This greatly affects throughput.
+- Several brokers support publishing batches of messages to boost throughput (with a latency penalty). Some brokers don't support batching, so messages are published one at a time for these. This affects throughput significantly.
 - The latency of a message is measured as the time it's sent subtracted from the time it's received. This requires recording the clocks of both the sender and receiver. If you're running scaled-up, *distributed* tests, then the clocks aren't perfectly synchronized. *These benchmarks aren't perfect.*
 - Related to the above point, measuring *anything* requires some computational overhead, which affects results. HDR Histogram tries to minimize this problem but can't remove it altogether.
 - There is currently no security built in. Use this tool *at your own risk*. The daemon runs on port 9500 by default.
