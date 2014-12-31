@@ -6,8 +6,11 @@ import (
 )
 
 const (
-	topic      = "test"
-	bufferSize = 5
+	topic = "test"
+
+	// bufferSize is the number of messages we try to publish at a time to
+	// increase throughput. TODO: this might need tweaking.
+	bufferSize = 50
 )
 
 type NSQPeer struct {
@@ -91,7 +94,7 @@ func (n *NSQPeer) Setup() {
 				}
 			case <-n.done:
 				if i > 0 {
-					if err := n.producer.MultiPublishAsync(topic, buffer, nil, nil); err != nil {
+					if err := n.producer.MultiPublishAsync(topic, buffer[0:i], nil, nil); err != nil {
 						n.errors <- err
 					}
 				}

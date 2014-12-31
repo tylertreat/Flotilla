@@ -122,7 +122,7 @@ func (c *CloudPubSubPeer) Setup() {
 				}
 			case <-c.done:
 				if i > 0 {
-					if _, err := pubsub.Publish(c.context, topic, buffer...); err != nil {
+					if _, err := pubsub.Publish(c.context, topic, buffer[0:i]...); err != nil {
 						c.errors <- err
 					}
 				}
