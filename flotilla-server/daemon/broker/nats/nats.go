@@ -23,6 +23,9 @@ const (
 type NATSPeer struct {
 	conn     *nats.Conn
 	messages chan []byte
+	send     chan []byte
+	errors   chan error
+	done     chan bool
 }
 
 func NewNATSPeer(host string) (*NATSPeer, error) {
@@ -35,9 +38,13 @@ func NewNATSPeer(host string) (*NATSPeer, error) {
 	// Consumer.
 	conn.Opts.AllowReconnect = false
 
-	messages := make(chan []byte, 100000)
-
-	return &NATSPeer{conn, messages}, nil
+	return &NATSPeer{
+		conn:     conn,
+		messages: make(chan []byte, 10000),
+		send:     make(chan []byte),
+		errors:   make(chan error),
+		done:     make(chan bool, 1),
+	}, nil
 }
 
 func (n *NATSPeer) Subscribe() error {
@@ -51,7 +58,30 @@ func (n *NATSPeer) Recv() ([]byte, error) {
 	return <-n.messages, nil
 }
 
-func (n *NATSPeer) Send(message []byte) error {
+func (n *NATSPeer) Send() chan<- []byte {
+	return n.send
+}
+
+func (n *NATSPeer) Errors() <-chan error {
+	return n.errors
+}
+
+func (n *NATSPeer) Setup() {
+	go func() {
+		for {
+			select {
+			case msg := <-n.send:
+				if err := n.sendMessage(msg); err != nil {
+					n.errors <- err
+				}
+			case <-n.done:
+				return
+			}
+		}
+	}()
+}
+
+func (n *NATSPeer) sendMessage(message []byte) error {
 	// Check if we are behind by >= 1MB bytes.
 	bytesDeltaOver := n.conn.OutBytes-n.conn.InBytes >= maxBytesBehind
 
@@ -67,5 +97,6 @@ func (n *NATSPeer) Send(message []byte) error {
 }
 
 func (n *NATSPeer) Teardown() {
+	n.done <- true
 	n.conn.Close()
 }

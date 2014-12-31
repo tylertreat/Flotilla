@@ -73,7 +73,9 @@ type broker interface {
 type peer interface {
 	Subscribe() error
 	Recv() ([]byte, error)
-	Send([]byte) error
+	Send() chan<- []byte
+	Errors() <-chan error
+	Setup()
 	Teardown()
 }
 

@@ -12,7 +12,10 @@ import (
 	"github.com/tylertreat/Flotilla/flotilla-server/daemon/broker"
 )
 
-const stopped = 1
+const (
+	stopped    = 1
+	bufferSize = 5
+)
 
 type CloudPubSubPeer struct {
 	context      context.Context
@@ -20,7 +23,11 @@ type CloudPubSubPeer struct {
 	messages     chan []byte
 	stopped      int32
 	acks         chan []string
+	ackDone      chan bool
+	send         chan []byte
+	errors       chan error
 	done         chan bool
+	flush        chan bool
 }
 
 func NewCloudPubSubPeer(projectID, jsonKey string) (*CloudPubSubPeer, error) {
@@ -33,7 +40,11 @@ func NewCloudPubSubPeer(projectID, jsonKey string) (*CloudPubSubPeer, error) {
 		context:  ctx,
 		messages: make(chan []byte, 10000),
 		acks:     make(chan []string, 100),
+		ackDone:  make(chan bool, 1),
+		send:     make(chan []byte),
+		errors:   make(chan error),
 		done:     make(chan bool, 1),
+		flush:    make(chan bool),
 	}, nil
 }
 
@@ -81,17 +92,47 @@ func (c *CloudPubSubPeer) Recv() ([]byte, error) {
 	return <-c.messages, nil
 }
 
-func (c *CloudPubSubPeer) Send(message []byte) error {
-	_, err := pubsub.Publish(c.context, topic, &pubsub.Message{Data: message})
-	if err != nil {
-		panic(err)
-	}
-	return err
+func (c *CloudPubSubPeer) Send() chan<- []byte {
+	return c.send
+}
+
+func (c *CloudPubSubPeer) Errors() <-chan error {
+	return c.errors
+}
+
+func (c *CloudPubSubPeer) Setup() {
+	buffer := make([]*pubsub.Message, bufferSize)
+	go func() {
+		i := 0
+		for {
+			select {
+			case msg := <-c.send:
+				buffer[i] = &pubsub.Message{Data: msg}
+				i++
+				if i == bufferSize {
+					if _, err := pubsub.Publish(c.context, topic, buffer...); err != nil {
+						c.errors <- err
+					}
+					i = 0
+				}
+			case <-c.done:
+				if i > 0 {
+					if _, err := pubsub.Publish(c.context, topic, buffer...); err != nil {
+						c.errors <- err
+					}
+				}
+				c.flush <- true
+				return
+			}
+		}
+	}()
 }
 
 func (c *CloudPubSubPeer) Teardown() {
-	atomic.StoreInt32(&c.stopped, stopped)
 	c.done <- true
+	<-c.flush
+	atomic.StoreInt32(&c.stopped, stopped)
+	c.ackDone <- true
 	pubsub.DeleteSub(c.context, c.subscription)
 }
 
@@ -104,7 +145,7 @@ func (c *CloudPubSubPeer) ack() {
 					log.Println("Failed to ack messages")
 				}
 			}
-		case <-c.done:
+		case <-c.ackDone:
 			return
 		}
 	}

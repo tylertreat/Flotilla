@@ -8,11 +8,18 @@ import (
 	"github.com/alindeman/go-kestrel"
 )
 
-const queue = "test"
+const (
+	queue      = "test"
+	bufferSize = 5
+)
 
 type KestrelPeer struct {
 	client   *kestrel.Client
 	messages chan []byte
+	send     chan []byte
+	errors   chan error
+	done     chan bool
+	flush    chan bool
 }
 
 func NewKestrelPeer(host string) (*KestrelPeer, error) {
@@ -35,6 +42,10 @@ func NewKestrelPeer(host string) (*KestrelPeer, error) {
 	return &KestrelPeer{
 		client:   client,
 		messages: make(chan []byte, 10000),
+		send:     make(chan []byte),
+		errors:   make(chan error),
+		done:     make(chan bool, 1),
+		flush:    make(chan bool),
 	}, nil
 }
 
@@ -59,11 +70,44 @@ func (k *KestrelPeer) Recv() ([]byte, error) {
 	return <-k.messages, nil
 }
 
-func (k *KestrelPeer) Send(message []byte) error {
-	_, err := k.client.Put(queue, [][]byte{message})
-	return err
+func (k *KestrelPeer) Send() chan<- []byte {
+	return k.send
+}
+
+func (k *KestrelPeer) Errors() <-chan error {
+	return k.errors
+}
+
+func (k *KestrelPeer) Setup() {
+	buffer := make([][]byte, bufferSize)
+	go func() {
+		i := 0
+		for {
+			select {
+			case msg := <-k.send:
+				buffer[i] = msg
+				i++
+				if i == bufferSize {
+					if _, err := k.client.Put(queue, buffer); err != nil {
+						k.errors <- err
+					}
+					i = 0
+				}
+			case <-k.done:
+				if i > 0 {
+					if _, err := k.client.Put(queue, buffer[0:i]); err != nil {
+						k.errors <- err
+					}
+				}
+				k.flush <- true
+				return
+			}
+		}
+	}()
 }
 
 func (k *KestrelPeer) Teardown() {
+	k.done <- true
+	<-k.flush
 	k.client.Close()
 }
