@@ -34,6 +34,9 @@ func (p *publisher) start() {
 		case send <- message:
 			continue
 		case err := <-errors:
+			// TODO: If a publish fails, a subscriber will probably deadlock.
+			// The best option is probably to signal back to the client that
+			// a publisher failed so it can orchestrate a shutdown.
 			log.Printf("Failed to send message: %s", err.Error())
 			p.mu.Lock()
 			p.results = &result{Err: err.Error()}
