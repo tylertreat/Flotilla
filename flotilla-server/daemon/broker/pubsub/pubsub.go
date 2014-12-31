@@ -13,8 +13,11 @@ import (
 )
 
 const (
-	stopped    = 1
-	bufferSize = 10
+	stopped = 1
+
+	// bufferSize is the number of messages we try to publish and consume at a
+	// time to increase throughput. TODO: this might need tweaking.
+	bufferSize = 100
 )
 
 type CloudPubSubPeer struct {
@@ -71,7 +74,7 @@ func (c *CloudPubSubPeer) Subscribe() error {
 	go func() {
 		// TODO: Can we avoid using atomic flag?
 		for atomic.LoadInt32(&c.stopped) != stopped {
-			messages, err := pubsub.PullWait(c.context, c.subscription, 100)
+			messages, err := pubsub.PullWait(c.context, c.subscription, bufferSize)
 			if err != nil {
 				// Timed out.
 				continue
