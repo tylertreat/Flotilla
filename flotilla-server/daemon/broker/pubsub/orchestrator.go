@@ -14,11 +14,14 @@ import (
 
 const topic = "test"
 
+// CloudPubSubBroker is an implementation of the broker interface which handles
+// orchestrating Google Cloud Pub/Sub.
 type CloudPubSubBroker struct {
 	ProjectID string
 	JSONKey   string
 }
 
+// Start will start the message broker and prepare it for testing.
 func (c *CloudPubSubBroker) Start(host, port string) (interface{}, error) {
 	ctx, err := newContext(c.ProjectID, c.JSONKey)
 	if err != nil {
@@ -48,6 +51,7 @@ func (c *CloudPubSubBroker) Start(host, port string) (interface{}, error) {
 	return "", nil
 }
 
+// Stop will stop the message broker.
 func (c *CloudPubSubBroker) Stop() (interface{}, error) {
 	ctx, err := newContext(c.ProjectID, c.JSONKey)
 	if err != nil {

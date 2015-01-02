@@ -20,6 +20,7 @@ const (
 	bufferSize = 100
 )
 
+// CloudPubSubPeer implements the peer interface for Google Cloud Pub/Sub.
 type CloudPubSubPeer struct {
 	context      context.Context
 	subscription string
@@ -33,6 +34,9 @@ type CloudPubSubPeer struct {
 	flush        chan bool
 }
 
+// NewCloudPubSubPeer creates and returns a new CloudPubSubPeer which
+// communicates with the specified Google Cloud project. It returns an error if
+// it cannot be created.
 func NewCloudPubSubPeer(projectID, jsonKey string) (*CloudPubSubPeer, error) {
 	ctx, err := newContext(projectID, jsonKey)
 	if err != nil {
@@ -51,6 +55,7 @@ func NewCloudPubSubPeer(projectID, jsonKey string) (*CloudPubSubPeer, error) {
 	}, nil
 }
 
+// Subscribe prepares the peer to consume messages.
 func (c *CloudPubSubPeer) Subscribe() error {
 	// Subscription names must start with a lowercase letter, end with a
 	// lowercase letter or number, and contain only lowercase letters, numbers,
@@ -91,23 +96,29 @@ func (c *CloudPubSubPeer) Subscribe() error {
 	return nil
 }
 
+// Recv returns a single message consumed by the peer. Subscribe must be called
+// before this. It returns an error if the receive failed.
 func (c *CloudPubSubPeer) Recv() ([]byte, error) {
 	return <-c.messages, nil
 }
 
+// Send returns a channel on which messages can be sent for publishing.
 func (c *CloudPubSubPeer) Send() chan<- []byte {
 	return c.send
 }
 
+// Errors returns the channel on which the peer sends publish errors.
 func (c *CloudPubSubPeer) Errors() <-chan error {
 	return c.errors
 }
 
+// Done signals to the peer that message publishing has completed.
 func (c *CloudPubSubPeer) Done() {
 	c.done <- true
 	<-c.flush
 }
 
+// Setup prepares the peer for testing.
 func (c *CloudPubSubPeer) Setup() {
 	buffer := make([]*pubsub.Message, bufferSize)
 	go func() {
@@ -136,6 +147,8 @@ func (c *CloudPubSubPeer) Setup() {
 	}()
 }
 
+// Teardown performs any cleanup logic that needs to be performed after the
+// test is complete.
 func (c *CloudPubSubPeer) Teardown() {
 	atomic.StoreInt32(&c.stopped, stopped)
 	c.ackDone <- true

@@ -23,21 +23,25 @@ type daemon string
 type operation string
 
 const (
-	start       operation = "start"
-	stop        operation = "stop"
-	run         operation = "run"
-	sub         operation = "subscribers"
-	pub         operation = "publishers"
-	results     operation = "results"
-	teardown    operation = "teardown"
-	NATS                  = "nats"
-	Beanstalkd            = "beanstalkd"
-	Kafka                 = "kafka"
-	Kestrel               = "kestrel"
-	ActiveMQ              = "activemq"
-	RabbitMQ              = "rabbitmq"
-	NSQ                   = "nsq"
-	CloudPubSub           = "pubsub"
+	start    operation = "start"
+	stop     operation = "stop"
+	run      operation = "run"
+	sub      operation = "subscribers"
+	pub      operation = "publishers"
+	results  operation = "results"
+	teardown operation = "teardown"
+)
+
+// These are supported message brokers.
+const (
+	NATS        = "nats"
+	Beanstalkd  = "beanstalkd"
+	Kafka       = "kafka"
+	Kestrel     = "kestrel"
+	ActiveMQ    = "activemq"
+	RabbitMQ    = "rabbitmq"
+	NSQ         = "nsq"
+	CloudPubSub = "pubsub"
 )
 
 type request struct {
@@ -65,26 +69,49 @@ type result struct {
 	Err        string          `json:"error,omitempty"`
 }
 
+// broker handles configuring the message broker for testing.
 type broker interface {
+	// Start will start the message broker and prepare it for testing.
 	Start(string, string) (interface{}, error)
+
+	// Stop will stop the message broker.
 	Stop() (interface{}, error)
 }
 
+// peer is a single producer or consumer in the test.
 type peer interface {
+	// Subscribe prepares the peer to consume messages.
 	Subscribe() error
+
+	// Recv returns a single message consumed by the peer. Subscribe must be
+	// called before this. It returns an error if the receive failed.
 	Recv() ([]byte, error)
+
+	// Send returns a channel on which messages can be sent for publishing.
 	Send() chan<- []byte
+
+	// Errors returns the channel on which the peer sends publish errors.
 	Errors() <-chan error
+
+	// Done signals to the peer that message publishing has completed.
 	Done()
+
+	// Setup prepares the peer for testing.
 	Setup()
+
+	// Teardown performs any cleanup logic that needs to be performed after the
+	// test is complete.
 	Teardown()
 }
 
+// Config contains configuration settings for the Flotilla daemon.
 type Config struct {
 	GoogleCloudProjectID string
 	GoogleCloudJSONKey   string
 }
 
+// Daemon is the server portion of Flotilla which runs on machines we want to
+// communicate with and include in our benchmarks.
 type Daemon struct {
 	mangos.Socket
 	broker      broker
@@ -93,6 +120,8 @@ type Daemon struct {
 	config      *Config
 }
 
+// NewDaemon creates and returns a new Daemon from the provided Config. An
+// error is returned if the Daemon cannot be created.
 func NewDaemon(config *Config) (*Daemon, error) {
 	rep, err := rep.NewSocket()
 	if err != nil {
@@ -102,6 +131,8 @@ func NewDaemon(config *Config) (*Daemon, error) {
 	return &Daemon{rep, nil, []*publisher{}, []*subscriber{}, config}, nil
 }
 
+// Start will allow the Daemon to begin processing requests. This is a blocking
+// call.
 func (d *Daemon) Start(port int) error {
 	if err := d.Listen(fmt.Sprintf("tcp://:%d", port)); err != nil {
 		return err
