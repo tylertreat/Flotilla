@@ -100,3 +100,4 @@ $ flotilla-client --broker=rabbitmq --docker-host=$(boot2docker ip)
 - Replace use of `os/exec` with Docker REST API (how does this work with boot2docker?)
 - Plottable data output.
 - Integration with [Comcast](https://github.com/tylertreat/Comcast) for testing under different network conditions.
+- Use etcd to provide shared configuration and daemon discovery
