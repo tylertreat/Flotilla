@@ -11,11 +11,13 @@ const (
 	internalPort = "61613"
 )
 
-type ActiveMQBroker struct {
+// Broker implements the broker interface for ActiveMQ.
+type Broker struct {
 	containerID string
 }
 
-func (a *ActiveMQBroker) Start(host, port string) (interface{}, error) {
+// Start will start the message broker and prepare it for testing.
+func (a *Broker) Start(host, port string) (interface{}, error) {
 	containerID, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker run -d -p %s:%s %s", port, internalPort, activeMQ)).Output()
 	if err != nil {
@@ -28,7 +30,8 @@ func (a *ActiveMQBroker) Start(host, port string) (interface{}, error) {
 	return string(containerID), nil
 }
 
-func (a *ActiveMQBroker) Stop() (interface{}, error) {
+// Stop will stop the message broker.
+func (a *Broker) Stop() (interface{}, error) {
 	containerID, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker kill %s", a.containerID)).Output()
 	if err != nil {

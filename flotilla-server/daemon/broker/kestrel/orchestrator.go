@@ -11,11 +11,13 @@ const (
 	internalPort = "2229"
 )
 
-type KestrelBroker struct {
+// Broker implements the broker interface for Kestrel.
+type Broker struct {
 	containerID string
 }
 
-func (k *KestrelBroker) Start(host, port string) (interface{}, error) {
+// Start will start the message broker and prepare it for testing.
+func (k *Broker) Start(host, port string) (interface{}, error) {
 	containerID, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker run -d -p %s:%s %s", port, internalPort, kestrelImage)).Output()
 	if err != nil {
@@ -28,7 +30,8 @@ func (k *KestrelBroker) Start(host, port string) (interface{}, error) {
 	return string(containerID), nil
 }
 
-func (k *KestrelBroker) Stop() (interface{}, error) {
+// Stop will stop the message broker.
+func (k *Broker) Stop() (interface{}, error) {
 	containerID, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker kill %s", k.containerID)).Output()
 	if err != nil {

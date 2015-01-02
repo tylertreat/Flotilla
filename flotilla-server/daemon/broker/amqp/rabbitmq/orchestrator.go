@@ -1,4 +1,4 @@
-package amqp
+package rabbitmq
 
 import (
 	"fmt"
@@ -11,11 +11,13 @@ const (
 	internalPort = "5672"
 )
 
-type RabbitMQBroker struct {
+// Broker implements the Broker interface for RabbitMQ.
+type Broker struct {
 	containerID string
 }
 
-func (r *RabbitMQBroker) Start(host, port string) (interface{}, error) {
+// Start will start the message broker and prepare it for testing.
+func (r *Broker) Start(host, port string) (interface{}, error) {
 	containerID, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker run -d -p %s:%s %s", port, internalPort, rabbitMQ)).Output()
 	if err != nil {
@@ -28,7 +30,8 @@ func (r *RabbitMQBroker) Start(host, port string) (interface{}, error) {
 	return string(containerID), nil
 }
 
-func (r *RabbitMQBroker) Stop() (interface{}, error) {
+// Stop will stop the message broker.
+func (r *Broker) Stop() (interface{}, error) {
 	containerID, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker kill %s", r.containerID)).Output()
 	if err != nil {

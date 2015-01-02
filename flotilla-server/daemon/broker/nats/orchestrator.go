@@ -11,11 +11,13 @@ const (
 	internalPort = "4222"
 )
 
-type NATSBroker struct {
+// Broker implements the broker interface for NATS.
+type Broker struct {
 	containerID string
 }
 
-func (n *NATSBroker) Start(host, port string) (interface{}, error) {
+// Start will start the message broker and prepare it for testing.
+func (n *Broker) Start(host, port string) (interface{}, error) {
 	containerID, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker run -d -p %s:%s %s", port, internalPort, gnatsd)).Output()
 	if err != nil {
@@ -28,7 +30,8 @@ func (n *NATSBroker) Start(host, port string) (interface{}, error) {
 	return string(containerID), nil
 }
 
-func (n *NATSBroker) Stop() (interface{}, error) {
+// Stop will stop the message broker.
+func (n *Broker) Stop() (interface{}, error) {
 	containerID, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker kill %s", n.containerID)).Output()
 	if err != nil {

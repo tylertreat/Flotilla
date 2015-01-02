@@ -11,6 +11,7 @@ import (
 	"github.com/gdamore/mangos/transport/tcp"
 	"github.com/tylertreat/Flotilla/flotilla-server/daemon/broker/activemq"
 	"github.com/tylertreat/Flotilla/flotilla-server/daemon/broker/amqp"
+	"github.com/tylertreat/Flotilla/flotilla-server/daemon/broker/amqp/rabbitmq"
 	"github.com/tylertreat/Flotilla/flotilla-server/daemon/broker/beanstalkd"
 	"github.com/tylertreat/Flotilla/flotilla-server/daemon/broker/kafka"
 	"github.com/tylertreat/Flotilla/flotilla-server/daemon/broker/kestrel"
@@ -218,21 +219,21 @@ func (d *Daemon) processBrokerStart(broker, host, port string) (interface{}, err
 
 	switch broker {
 	case NATS:
-		d.broker = &nats.NATSBroker{}
+		d.broker = &nats.Broker{}
 	case Beanstalkd:
-		d.broker = &beanstalkd.BeanstalkdBroker{}
+		d.broker = &beanstalkd.Broker{}
 	case Kafka:
-		d.broker = &kafka.KafkaBroker{}
+		d.broker = &kafka.Broker{}
 	case Kestrel:
-		d.broker = &kestrel.KestrelBroker{}
+		d.broker = &kestrel.Broker{}
 	case ActiveMQ:
-		d.broker = &activemq.ActiveMQBroker{}
+		d.broker = &activemq.Broker{}
 	case RabbitMQ:
-		d.broker = &amqp.RabbitMQBroker{}
+		d.broker = &rabbitmq.Broker{}
 	case NSQ:
-		d.broker = &nsq.NSQBroker{}
+		d.broker = &nsq.Broker{}
 	case CloudPubSub:
-		d.broker = &pubsub.CloudPubSubBroker{
+		d.broker = &pubsub.Broker{
 			ProjectID: d.config.GoogleCloudProjectID,
 			JSONKey:   d.config.GoogleCloudJSONKey,
 		}

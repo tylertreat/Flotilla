@@ -22,12 +22,14 @@ const (
 						 -e ZOOKEEPER_IP=%s %s`
 )
 
-type KafkaBroker struct {
+// Broker implements the broker interface for Kafka.
+type Broker struct {
 	kafkaContainerID     string
 	zookeeperContainerID string
 }
 
-func (k *KafkaBroker) Start(host, port string) (interface{}, error) {
+// Start will start the message broker and prepare it for testing.
+func (k *Broker) Start(host, port string) (interface{}, error) {
 	if port == zookeeperPort || port == jmxPort {
 		return nil, fmt.Errorf("Port %s is reserved", port)
 	}
@@ -60,7 +62,8 @@ func (k *KafkaBroker) Start(host, port string) (interface{}, error) {
 	return string(kafkaContainerID), nil
 }
 
-func (k *KafkaBroker) Stop() (interface{}, error) {
+// Stop will stop the message broker.
+func (k *Broker) Stop() (interface{}, error) {
 	_, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("docker kill %s", k.zookeeperContainerID)).Output()
 	if err != nil {
 		log.Printf("Failed to stop container %s: %s", zookeeper, err.Error())

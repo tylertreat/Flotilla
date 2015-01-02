@@ -11,11 +11,13 @@ const (
 	internalPort = "11300"
 )
 
-type BeanstalkdBroker struct {
+// Broker implements the broker interface for Beanstalkd.
+type Broker struct {
 	containerID string
 }
 
-func (b *BeanstalkdBroker) Start(host, port string) (interface{}, error) {
+// Start will start the message broker and prepare it for testing.
+func (b *Broker) Start(host, port string) (interface{}, error) {
 	containerID, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker run -d -p %s:%s %s", port, internalPort, beanstalkd)).Output()
 	if err != nil {
@@ -28,7 +30,8 @@ func (b *BeanstalkdBroker) Start(host, port string) (interface{}, error) {
 	return string(containerID), nil
 }
 
-func (b *BeanstalkdBroker) Stop() (interface{}, error) {
+// Stop will stop the message broker.
+func (b *Broker) Stop() (interface{}, error) {
 	containerID, err := exec.Command("/bin/sh", "-c",
 		fmt.Sprintf("docker kill %s", b.containerID)).Output()
 	if err != nil {
