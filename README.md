@@ -1,6 +1,6 @@
 # Flotilla
 
-Flotilla is a **work-in-progress** tool for testing message queues in more realistic environments. [Many benchmarks](https://github.com/tylertreat/mq-benchmarking) only measure performance characteristics on a single machine, sometimes with producers and consumers in the *same process* even. The reality is this information is marginally useful, if at all, and often deceiving.
+Flotilla is a **work-in-progress** tool for testing message queues in more realistic environments. [Many benchmarks](https://github.com/tylertreat/mq-benchmarking) only measure performance characteristics on a single machine, sometimes with producers and consumers in the *same process* even. The reality is this information is marginally useful, if at all, and often deceiving. This [blog post](http://www.bravenewgeek.com/benchmark-responsibly/) provides some more background on the motivation behind this project.
 
 Testing anything at scale can be difficult to achieve in practice. It generally takes a lot of resources and often requires ad hoc solutions. Flotilla attempts to provide automated orchestration for benchmarking message queues in scaled-up configurations. Simply put, we can benchmark a message broker with arbitrarily many producers and consumers distributed across arbitrarily many machines with a single command.
 
