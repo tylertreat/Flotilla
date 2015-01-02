@@ -361,7 +361,7 @@ func (d *Daemon) newPeer(broker, host string) (peer, error) {
 	case NSQ:
 		return nsq.NewPeer(host)
 	case CloudPubSub:
-		return pubsub.NewCloudPubSubPeer(
+		return pubsub.NewPeer(
 			d.config.GoogleCloudProjectID,
 			d.config.GoogleCloudJSONKey,
 		)
