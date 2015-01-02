@@ -45,6 +45,7 @@ type response struct {
 	SubResults []*Result   `json:"sub_results,omitempty"`
 }
 
+// Benchmark contains configuration settings for broker tests.
 type Benchmark struct {
 	BrokerdHost  string
 	BrokerName   string
@@ -98,6 +99,7 @@ func (b *Benchmark) validate() error {
 	return nil
 }
 
+// Result contains test result data for a single peer.
 type Result struct {
 	Duration   float32        `json:"duration,omitempty"`
 	Throughput float32        `json:"throughput,omitempty"`
@@ -105,12 +107,14 @@ type Result struct {
 	Err        string         `json:"error"`
 }
 
+// ResultContainer contains the Results for a single node.
 type ResultContainer struct {
 	Peer              string
 	PublisherResults  []*Result
 	SubscriberResults []*Result
 }
 
+// LatencyResults contains the latency result data for a single peer.
 type LatencyResults struct {
 	Min    int64   `json:"min"`
 	Q1     int64   `json:"q1"`
@@ -121,12 +125,16 @@ type LatencyResults struct {
 	StdDev float64 `json:"std_dev"`
 }
 
+// Client provides an API for interacting with Flotilla.
 type Client struct {
 	brokerd   mangos.Socket
 	peerd     map[string]mangos.Socket
 	Benchmark *Benchmark
 }
 
+// NewClient creates and returns a new Client from the provided Benchmark
+// configuration. It returns an error if the Benchmark is not valid or it
+// can't communicate with any of the specified peers.
 func NewClient(b *Benchmark) (*Client, error) {
 	if err := b.validate(); err != nil {
 		return nil, err
@@ -168,6 +176,7 @@ func NewClient(b *Benchmark) (*Client, error) {
 	}, nil
 }
 
+// Start begins the broker test.
 func (c *Client) Start() ([]*ResultContainer, error) {
 	fmt.Println("Starting broker - if the image hasn't been pulled yet, this may take a while...")
 	if err := c.startBroker(); err != nil {
@@ -301,6 +310,8 @@ func (c *Client) collectResults() <-chan []*ResultContainer {
 	return resultsChan
 }
 
+// Teardown performs any necessary cleanup logic, including stopping the
+// broker and tearing down peers.
 func (c *Client) Teardown() {
 	fmt.Println("Tearing down peers")
 	for _, peerd := range c.peerd {
