@@ -13,6 +13,7 @@ const (
 	bufferSize = 50
 )
 
+// NSQPeer implements the peer interface for NSQ.
 type NSQPeer struct {
 	producer *nsq.Producer
 	consumer *nsq.Consumer
@@ -24,6 +25,8 @@ type NSQPeer struct {
 	flush    chan bool
 }
 
+// NewNSQPeer creates and returns a new NSQPeer. It returns an error if the
+// peer cannot not be created.
 func NewNSQPeer(host string) (*NSQPeer, error) {
 	producer, err := nsq.NewProducer(host, nsq.NewConfig())
 	if err != nil {
@@ -41,6 +44,7 @@ func NewNSQPeer(host string) (*NSQPeer, error) {
 	}, nil
 }
 
+// Subscribe prepares the peer to consume messages.
 func (n *NSQPeer) Subscribe() error {
 	consumer, err := nsq.NewConsumer(topic, broker.GenerateName(), nsq.NewConfig())
 	if err != nil {
@@ -60,23 +64,29 @@ func (n *NSQPeer) Subscribe() error {
 	return nil
 }
 
+// Recv returns a single message consumed by the peer. Subscribe must be called
+// before this. It returns an error if the receive failed.
 func (n *NSQPeer) Recv() ([]byte, error) {
 	return <-n.messages, nil
 }
 
+// Send returns a channel on which messages can be sent for publishing.
 func (n *NSQPeer) Send() chan<- []byte {
 	return n.send
 }
 
+// Errors returns the channel on which the peer sends publish errors.
 func (n *NSQPeer) Errors() <-chan error {
 	return n.errors
 }
 
+// Done signals to the peer that message publishing has completed.
 func (n *NSQPeer) Done() {
 	n.done <- true
 	<-n.flush
 }
 
+// Setup prepares the peer for testing.
 func (n *NSQPeer) Setup() {
 	buffer := make([][]byte, bufferSize)
 	go func() {
@@ -106,6 +116,8 @@ func (n *NSQPeer) Setup() {
 
 }
 
+// Teardown performs any cleanup logic that needs to be performed after the
+// test is complete.
 func (n *NSQPeer) Teardown() {
 	n.producer.Stop()
 	if n.consumer != nil {

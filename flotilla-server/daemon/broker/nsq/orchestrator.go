@@ -19,11 +19,14 @@ const (
 	                       --lookupd-tcp-address=%s:%s`
 )
 
+// NSQBroker is an implementation of the broker interface which handles
+// orchestrating NSQ.
 type NSQBroker struct {
 	nsqlookupdContainerID string
 	nsqdContainerID       string
 }
 
+// Start will start the message broker and prepare it for testing.
 func (n *NSQBroker) Start(host, port string) (interface{}, error) {
 	if port == nsqlookupdPort1 || port == nsqlookupdPort2 || port == nsqdPort {
 		return nil, fmt.Errorf("Port %s is reserved", port)
@@ -52,6 +55,7 @@ func (n *NSQBroker) Start(host, port string) (interface{}, error) {
 	return string(nsqdContainerID), nil
 }
 
+// Stop will stop the message broker.
 func (n *NSQBroker) Stop() (interface{}, error) {
 	_, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("docker kill %s", n.nsqlookupdContainerID)).Output()
 	if err != nil {
