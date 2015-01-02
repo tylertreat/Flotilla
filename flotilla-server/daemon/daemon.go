@@ -347,19 +347,19 @@ func (d *Daemon) processTeardown() {
 func (d *Daemon) newPeer(broker, host string) (peer, error) {
 	switch broker {
 	case NATS:
-		return nats.NewNATSPeer(host)
+		return nats.NewPeer(host)
 	case Beanstalkd:
-		return beanstalkd.NewBeanstalkdPeer(host)
+		return beanstalkd.NewPeer(host)
 	case Kafka:
-		return kafka.NewKafkaPeer(host)
+		return kafka.NewPeer(host)
 	case Kestrel:
-		return kestrel.NewKestrelPeer(host)
+		return kestrel.NewPeer(host)
 	case ActiveMQ:
-		return activemq.NewActiveMQPeer(host)
+		return activemq.NewPeer(host)
 	case RabbitMQ:
-		return amqp.NewAMQPPeer(host)
+		return amqp.NewPeer(host)
 	case NSQ:
-		return nsq.NewNSQPeer(host)
+		return nsq.NewPeer(host)
 	case CloudPubSub:
 		return pubsub.NewCloudPubSubPeer(
 			d.config.GoogleCloudProjectID,

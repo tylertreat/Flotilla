@@ -9,7 +9,8 @@ const (
 	exchange = "test"
 )
 
-type AMQPPeer struct {
+// Peer implements the peer interface for AMQP brokers.
+type Peer struct {
 	conn    *amqp.Connection
 	queue   amqp.Queue
 	channel *amqp.Channel
@@ -19,7 +20,8 @@ type AMQPPeer struct {
 	done    chan bool
 }
 
-func NewAMQPPeer(host string) (*AMQPPeer, error) {
+// NewPeer creates and returns a new Peer for communicating with AMQP brokers.
+func NewPeer(host string) (*Peer, error) {
 	conn, err := amqp.Dial("amqp://" + host)
 	if err != nil {
 		return nil, err
@@ -55,7 +57,7 @@ func NewAMQPPeer(host string) (*AMQPPeer, error) {
 		return nil, err
 	}
 
-	return &AMQPPeer{
+	return &Peer{
 		conn:    conn,
 		queue:   queue,
 		channel: channel,
@@ -65,7 +67,8 @@ func NewAMQPPeer(host string) (*AMQPPeer, error) {
 	}, nil
 }
 
-func (a *AMQPPeer) Subscribe() error {
+// Subscribe prepares the peer to consume messages.
+func (a *Peer) Subscribe() error {
 	err := a.channel.QueueBind(
 		a.queue.Name,
 		a.queue.Name,
@@ -93,24 +96,30 @@ func (a *AMQPPeer) Subscribe() error {
 	return nil
 }
 
-func (a *AMQPPeer) Recv() ([]byte, error) {
+// Recv returns a single message consumed by the peer. Subscribe must be called
+// before this. It returns an error if the receive failed.
+func (a *Peer) Recv() ([]byte, error) {
 	message := <-a.inbound
 	return message.Body, nil
 }
 
-func (a *AMQPPeer) Send() chan<- []byte {
+// Send returns a channel on which messages can be sent for publishing.
+func (a *Peer) Send() chan<- []byte {
 	return a.send
 }
 
-func (a *AMQPPeer) Errors() <-chan error {
+// Errors returns the channel on which the peer sends publish errors.
+func (a *Peer) Errors() <-chan error {
 	return a.errors
 }
 
-func (a *AMQPPeer) Done() {
+// Done signals to the peer that message publishing has completed.
+func (a *Peer) Done() {
 	a.done <- true
 }
 
-func (a *AMQPPeer) Setup() {
+// Setup prepares the peer for testing.
+func (a *Peer) Setup() {
 	go func() {
 		for {
 			select {
@@ -131,7 +140,9 @@ func (a *AMQPPeer) Setup() {
 	}()
 }
 
-func (a *AMQPPeer) Teardown() {
+// Teardown performs any cleanup logic that needs to be performed after the
+// test is complete.
+func (a *Peer) Teardown() {
 	a.channel.Close()
 	a.conn.Close()
 }

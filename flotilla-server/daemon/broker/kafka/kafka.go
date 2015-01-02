@@ -8,7 +8,8 @@ import (
 
 const topic = "test"
 
-type KafkaPeer struct {
+// Peer implements the peer interface for Kafka.
+type Peer struct {
 	client   *sarama.Client
 	producer *sarama.Producer
 	consumer *sarama.Consumer
@@ -17,7 +18,8 @@ type KafkaPeer struct {
 	done     chan bool
 }
 
-func NewKafkaPeer(host string) (*KafkaPeer, error) {
+// NewPeer creates and returns a new Peer for communicating with Kafka.
+func NewPeer(host string) (*Peer, error) {
 	host = strings.Split(host, ":")[0] + ":9092"
 	client, err := sarama.NewClient("producer", []string{host}, sarama.NewClientConfig())
 	if err != nil {
@@ -29,7 +31,7 @@ func NewKafkaPeer(host string) (*KafkaPeer, error) {
 		return nil, err
 	}
 
-	return &KafkaPeer{
+	return &Peer{
 		client:   client,
 		producer: producer,
 		send:     make(chan []byte),
@@ -38,7 +40,8 @@ func NewKafkaPeer(host string) (*KafkaPeer, error) {
 	}, nil
 }
 
-func (k *KafkaPeer) Subscribe() error {
+// Subscribe prepares the peer to consume messages.
+func (k *Peer) Subscribe() error {
 	consumerConfig := sarama.NewConsumerConfig()
 	consumerConfig.OffsetMethod = sarama.OffsetMethodNewest
 	consumerConfig.DefaultFetchSize = 10 * 1024 * 1024
@@ -50,7 +53,9 @@ func (k *KafkaPeer) Subscribe() error {
 	return nil
 }
 
-func (k *KafkaPeer) Recv() ([]byte, error) {
+// Recv returns a single message consumed by the peer. Subscribe must be called
+// before this. It returns an error if the receive failed.
+func (k *Peer) Recv() ([]byte, error) {
 	event := <-k.consumer.Events()
 	if event.Err != nil {
 		return nil, event.Err
@@ -58,19 +63,23 @@ func (k *KafkaPeer) Recv() ([]byte, error) {
 	return event.Value, nil
 }
 
-func (k *KafkaPeer) Send() chan<- []byte {
+// Send returns a channel on which messages can be sent for publishing.
+func (k *Peer) Send() chan<- []byte {
 	return k.send
 }
 
-func (k *KafkaPeer) Errors() <-chan error {
+// Errors returns the channel on which the peer sends publish errors.
+func (k *Peer) Errors() <-chan error {
 	return k.errors
 }
 
-func (k *KafkaPeer) Done() {
+// Done signals to the peer that message publishing has completed.
+func (k *Peer) Done() {
 	k.done <- true
 }
 
-func (k *KafkaPeer) Setup() {
+// Setup prepares the peer for testing.
+func (k *Peer) Setup() {
 	go func() {
 		for {
 			select {
@@ -85,7 +94,7 @@ func (k *KafkaPeer) Setup() {
 	}()
 }
 
-func (k *KafkaPeer) sendMessage(message []byte) error {
+func (k *Peer) sendMessage(message []byte) error {
 	select {
 	case k.producer.Input() <- &sarama.MessageToSend{Topic: topic, Key: nil, Value: sarama.ByteEncoder(message)}:
 		return nil
@@ -94,7 +103,9 @@ func (k *KafkaPeer) sendMessage(message []byte) error {
 	}
 }
 
-func (k *KafkaPeer) Teardown() {
+// Teardown performs any cleanup logic that needs to be performed after the
+// test is complete.
+func (k *Peer) Teardown() {
 	k.producer.Close()
 	if k.consumer != nil {
 		k.consumer.Close()

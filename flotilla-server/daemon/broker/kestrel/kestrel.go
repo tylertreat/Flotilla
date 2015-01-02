@@ -16,7 +16,8 @@ const (
 	bufferSize = 100
 )
 
-type KestrelPeer struct {
+// Peer implements the peer interface for Kestrel.
+type Peer struct {
 	client     *kestrel.Client
 	messages   chan []byte
 	send       chan []byte
@@ -26,7 +27,8 @@ type KestrelPeer struct {
 	subscriber bool
 }
 
-func NewKestrelPeer(host string) (*KestrelPeer, error) {
+// NewPeer creates and returns a new Peer for communicating with Kestrel.
+func NewPeer(host string) (*Peer, error) {
 	addrAndPort := strings.Split(host, ":")
 	if len(addrAndPort) < 2 {
 		return nil, fmt.Errorf("Invalid host: %s", host)
@@ -43,7 +45,7 @@ func NewKestrelPeer(host string) (*KestrelPeer, error) {
 		return nil, err
 	}
 
-	return &KestrelPeer{
+	return &Peer{
 		client:   client,
 		messages: make(chan []byte, 10000),
 		send:     make(chan []byte),
@@ -53,7 +55,8 @@ func NewKestrelPeer(host string) (*KestrelPeer, error) {
 	}, nil
 }
 
-func (k *KestrelPeer) Subscribe() error {
+// Subscribe prepares the peer to consume messages.
+func (k *Peer) Subscribe() error {
 	k.subscriber = true
 	go func() {
 		for {
@@ -70,24 +73,30 @@ func (k *KestrelPeer) Subscribe() error {
 	return nil
 }
 
-func (k *KestrelPeer) Recv() ([]byte, error) {
+// Recv returns a single message consumed by the peer. Subscribe must be called
+// before this. It returns an error if the receive failed.
+func (k *Peer) Recv() ([]byte, error) {
 	return <-k.messages, nil
 }
 
-func (k *KestrelPeer) Send() chan<- []byte {
+// Send returns a channel on which messages can be sent for publishing.
+func (k *Peer) Send() chan<- []byte {
 	return k.send
 }
 
-func (k *KestrelPeer) Errors() <-chan error {
+// Errors returns the channel on which the peer sends publish errors.
+func (k *Peer) Errors() <-chan error {
 	return k.errors
 }
 
-func (k *KestrelPeer) Done() {
+// Done signals to the peer that message publishing has completed.
+func (k *Peer) Done() {
 	k.done <- true
 	<-k.flush
 }
 
-func (k *KestrelPeer) Setup() {
+// Setup prepares the peer for testing.
+func (k *Peer) Setup() {
 	buffer := make([][]byte, bufferSize)
 	go func() {
 		i := 0
@@ -115,6 +124,8 @@ func (k *KestrelPeer) Setup() {
 	}()
 }
 
-func (k *KestrelPeer) Teardown() {
+// Teardown performs any cleanup logic that needs to be performed after the
+// test is complete.
+func (k *Peer) Teardown() {
 	k.client.Close()
 }

@@ -20,7 +20,8 @@ const (
 	delay = 1 * time.Millisecond
 )
 
-type NATSPeer struct {
+// Peer implements the peer interface for NATS.
+type Peer struct {
 	conn     *nats.Conn
 	messages chan []byte
 	send     chan []byte
@@ -28,7 +29,8 @@ type NATSPeer struct {
 	done     chan bool
 }
 
-func NewNATSPeer(host string) (*NATSPeer, error) {
+// NewPeer creates and returns a new Peer for communicating with NATS.
+func NewPeer(host string) (*Peer, error) {
 	conn, err := nats.Connect(fmt.Sprintf("nats://%s", host))
 	if err != nil {
 		return nil, err
@@ -38,7 +40,7 @@ func NewNATSPeer(host string) (*NATSPeer, error) {
 	// Consumer.
 	conn.Opts.AllowReconnect = false
 
-	return &NATSPeer{
+	return &Peer{
 		conn:     conn,
 		messages: make(chan []byte, 10000),
 		send:     make(chan []byte),
@@ -47,30 +49,37 @@ func NewNATSPeer(host string) (*NATSPeer, error) {
 	}, nil
 }
 
-func (n *NATSPeer) Subscribe() error {
+// Subscribe prepares the peer to consume messages.
+func (n *Peer) Subscribe() error {
 	n.conn.Subscribe(subject, func(message *nats.Msg) {
 		n.messages <- message.Data
 	})
 	return nil
 }
 
-func (n *NATSPeer) Recv() ([]byte, error) {
+// Recv returns a single message consumed by the peer. Subscribe must be called
+// before this. It returns an error if the receive failed.
+func (n *Peer) Recv() ([]byte, error) {
 	return <-n.messages, nil
 }
 
-func (n *NATSPeer) Send() chan<- []byte {
+// Send returns a channel on which messages can be sent for publishing.
+func (n *Peer) Send() chan<- []byte {
 	return n.send
 }
 
-func (n *NATSPeer) Errors() <-chan error {
+// Errors returns the channel on which the peer sends publish errors.
+func (n *Peer) Errors() <-chan error {
 	return n.errors
 }
 
-func (n *NATSPeer) Done() {
+// Done signals to the peer that message publishing has completed.
+func (n *Peer) Done() {
 	n.done <- true
 }
 
-func (n *NATSPeer) Setup() {
+// Setup prepares the peer for testing.
+func (n *Peer) Setup() {
 	go func() {
 		for {
 			select {
@@ -85,7 +94,7 @@ func (n *NATSPeer) Setup() {
 	}()
 }
 
-func (n *NATSPeer) sendMessage(message []byte) error {
+func (n *Peer) sendMessage(message []byte) error {
 	// Check if we are behind by >= 1MB bytes.
 	bytesDeltaOver := n.conn.OutBytes-n.conn.InBytes >= maxBytesBehind
 
@@ -100,6 +109,8 @@ func (n *NATSPeer) sendMessage(message []byte) error {
 	return n.conn.Publish(subject, message)
 }
 
-func (n *NATSPeer) Teardown() {
+// Teardown performs any cleanup logic that needs to be performed after the
+// test is complete.
+func (n *Peer) Teardown() {
 	n.conn.Close()
 }
