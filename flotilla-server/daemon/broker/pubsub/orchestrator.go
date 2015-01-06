@@ -90,6 +90,6 @@ func newContext(projectID, jsonKey string) (context.Context, error) {
 		return nil, err
 	}
 
-	ctx := cloud.NewContext(projectID, conf.Client(oauth2.NoContext, nil))
+	ctx := cloud.NewContext(projectID, conf.Client(oauth2.NoContext))
 	return ctx, nil
 }
