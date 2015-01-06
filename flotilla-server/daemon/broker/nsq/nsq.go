@@ -120,7 +120,6 @@ func (n *Peer) Setup() {
 func (n *Peer) Teardown() {
 	n.producer.Stop()
 	if n.consumer != nil {
-		n.consumer.DisconnectFromNSQD(n.host)
 		n.consumer.Stop()
 		<-n.consumer.StopChan
 	}
