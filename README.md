@@ -100,4 +100,6 @@ $ flotilla-client --broker=rabbitmq --docker-host=$(boot2docker ip)
 - Replace use of `os/exec` with Docker REST API (how does this work with boot2docker?)
 - Plottable data output.
 - Integration with [Comcast](https://github.com/tylertreat/Comcast) for testing under different network conditions.
-- Use etcd to provide shared configuration and daemon discovery
+- Use [etcd](https://github.com/coreos/etcd) to provide shared configuration and daemon discovery
+- Use [usl](https://github.com/codahale/usl) to populate a [Universal Scalability Law](http://www.perfdynamics.com/Manifesto/USLscalability.html) model
+- Use [tinystat](https://github.com/codahale/tinystat) to compare benchmark runs and tease out statistical noise
