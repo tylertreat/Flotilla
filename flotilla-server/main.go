@@ -25,8 +25,6 @@ func main() {
 	config := &daemon.Config{
 		GoogleCloudProjectID: *gCloudProjectID,
 		GoogleCloudJSONKey:   *gCloudJSONKey,
-		CoordinatorIP:        *coordinator,
-		Flota:                *flota,
 	}
 
 	d, err := daemon.NewDaemon(config)
@@ -42,7 +40,7 @@ func main() {
 
 	var client coordinate.Client
 	if coordinator && flota {
-		client := coordinator.NewSimpleCoordniator(config.CoordinatorIP, config.Flota)
+		client := coordinator.NewSimpleCoordniator(*coordinator, *flota)
 		client.Register(*port)
 	}
 

@@ -109,8 +109,6 @@ type peer interface {
 type Config struct {
 	GoogleCloudProjectID string
 	GoogleCloudJSONKey   string
-	CoordinatorIP        string
-	Flota                string
 }
 
 // Daemon is the server portion of Flotilla which runs on machines we want to
