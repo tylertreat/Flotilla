@@ -53,21 +53,18 @@ func main() {
 		startupSleep = flag.Uint("startup-sleep", defaultStartupSleep, "seconds to wait after broker start before benchmarking")
 		coordinator  = flag.String("coordinator", "", "http ip & port address for etcd")
 		flota        = flag.String("flota", "", "test group the deamon is part of")
-		numdaemons   = flag.Uint("num-deamons", defaultNumDeamon, "The number of deamons the coordinator should wait for before starting")
+		numdaemons   = flag.Int("num-deamons", defaultNumDeamon, "The number of deamons the coordinator should wait for before starting")
 	)
 	flag.Parse()
-	// Connect to coordinator service to establish our presence now that we
-	// are up and running ok.
-	// TODO: Modify this so that we can do TLS connections if we have the right
-	// information
 
 	peers := strings.Split(*peerHosts, ",")
 
-	var client coordinate.Client
-	if coordinator != "" && flota != "" && numdaemons > 0 {
-		client := coordinator.NewSimpleCoordniator(config.CoordinatorIP, config.Flota)
-		client.StartCluster(numdaemons)
-		peers = append(peers, client.ClusterMembers()...)
+	// If we are to use etcd then start the cluster coordination
+	var cclient coordinate.Client
+	if coordinator != nil && flota != nil && *numdaemons > 0 {
+		cclient := coordinate.NewSimpleCoordinator(*coordinator, *flota)
+		cclient.StartCluster(*numdaemons, int(*startupSleep))
+		peers = append(peers, cclient.ClusterMembers()...)
 	}
 
 	client, err := broker.NewClient(&broker.Benchmark{
@@ -83,8 +80,7 @@ func main() {
 		StartupSleep: *startupSleep,
 	})
 	if err != nil {
-
-		client.StopCluster()
+		cclient.StopCluster()
 		fmt.Println("Failed to connect to flotilla:", err)
 		os.Exit(1)
 	}
