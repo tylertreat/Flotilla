@@ -62,7 +62,7 @@ func main() {
 
 	// If we are to use etcd then start the cluster coordination
 	var cclient coordinate.Client
-	if coordinator != nil && flota != nil && *numdaemons > 0 {
+	if coordinator != nil && *flota != "" && *numdaemons >= 0 {
 		log.Printf("Starting Cluster for %s and waiting for %d daemons", *flota, *numdaemons)
 		cclient := coordinate.NewSimpleCoordinator(*coordinator, *flota)
 		up := cclient.StartCluster(*numdaemons, int(*startupSleep))

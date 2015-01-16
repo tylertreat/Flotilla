@@ -42,8 +42,11 @@ func (c *Client) StartCluster(numdaemons int, startsleep int) bool {
 	t := time.Now()
 	value := t.Format(time.RFC3339)
 	resp, err := c.client.Create(rootDir+c.flota, string(value), defaultTTL)
-	if resp == nil || err != nil {
+	if resp == nil {
 		panic(ErrorUnableToStartCluster)
+	}
+	if err != nil {
+		panic(err)
 	}
 
 	// Wait for the cluster to spin up for the sleep time or return when
