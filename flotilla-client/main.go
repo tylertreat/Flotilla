@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/tylertreat/Flotilla/coordinate"
 	"github.com/tylertreat/Flotilla/flotilla-client/broker"
 )
 
@@ -22,6 +23,7 @@ const (
 	defaultNumProducers = 1
 	defaultNumConsumers = 1
 	defaultStartupSleep = 8
+	defaultNumDeamon    = 0
 	defaultHost         = "localhost"
 	defaultDaemonHost   = defaultHost + ":" + defaultDaemonPort
 )
@@ -49,10 +51,24 @@ func main() {
 		numMessages  = flag.Uint("num-messages", defaultNumMessages, "number of messages to send from each producer")
 		messageSize  = flag.Uint64("message-size", defaultMessageSize, "size of each message in bytes")
 		startupSleep = flag.Uint("startup-sleep", defaultStartupSleep, "seconds to wait after broker start before benchmarking")
+		coordinator  = flag.String("coordinator", "", "http ip & port address for etcd")
+		flota        = flag.String("flota", "", "test group the deamon is part of")
+		numdaemons   = flag.Uint("num-deamons", defaultNumDeamon, "The number of deamons the coordinator should wait for before starting")
 	)
 	flag.Parse()
+	// Connect to coordinator service to establish our presence now that we
+	// are up and running ok.
+	// TODO: Modify this so that we can do TLS connections if we have the right
+	// information
 
 	peers := strings.Split(*peerHosts, ",")
+
+	var client coordinate.Client
+	if coordinator != "" && flota != "" && numdaemons > 0 {
+		client := coordinator.NewSimpleCoordniator(config.CoordinatorIP, config.Flota)
+		client.StartCluster(numdaemons)
+		peers = append(peers, client.ClusterMembers()...)
+	}
 
 	client, err := broker.NewClient(&broker.Benchmark{
 		BrokerdHost:  *brokerdHost,
@@ -67,6 +83,8 @@ func main() {
 		StartupSleep: *startupSleep,
 	})
 	if err != nil {
+
+		client.StopCluster()
 		fmt.Println("Failed to connect to flotilla:", err)
 		os.Exit(1)
 	}
