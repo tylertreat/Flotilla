@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"strconv"
@@ -23,7 +24,7 @@ const (
 	defaultNumProducers = 1
 	defaultNumConsumers = 1
 	defaultStartupSleep = 8
-	defaultNumDeamon    = 0
+	defaultNumDaemon    = 0
 	defaultHost         = "localhost"
 	defaultDaemonHost   = defaultHost + ":" + defaultDaemonPort
 )
@@ -53,7 +54,7 @@ func main() {
 		startupSleep = flag.Uint("startup-sleep", defaultStartupSleep, "seconds to wait after broker start before benchmarking")
 		coordinator  = flag.String("coordinator", "", "http ip & port address for etcd")
 		flota        = flag.String("flota", "", "test group the deamon is part of")
-		numdaemons   = flag.Int("num-deamons", defaultNumDeamon, "The number of deamons the coordinator should wait for before starting")
+		numdaemons   = flag.Int("num-daemons", defaultNumDaemon, "The number of daemons the coordinator should wait for before starting")
 	)
 	flag.Parse()
 
@@ -62,8 +63,15 @@ func main() {
 	// If we are to use etcd then start the cluster coordination
 	var cclient coordinate.Client
 	if coordinator != nil && flota != nil && *numdaemons > 0 {
+		log.Printf("Starting Cluster for %s and waiting for %d daemons", *flota, *numdaemons)
 		cclient := coordinate.NewSimpleCoordinator(*coordinator, *flota)
-		cclient.StartCluster(*numdaemons, int(*startupSleep))
+		up := cclient.StartCluster(*numdaemons, int(*startupSleep))
+		if up {
+			log.Println("Cluster Started")
+		} else {
+			log.Println("Cluster did not start")
+			os.Exit(1)
+		}
 		peers = append(peers, cclient.ClusterMembers()...)
 	}
 

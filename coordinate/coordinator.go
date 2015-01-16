@@ -2,6 +2,7 @@ package coordinate
 
 import (
 	"errors"
+	"log"
 	"net"
 	"strings"
 	"sync"
@@ -32,8 +33,12 @@ type Client struct {
 	stopList  map[string]chan bool
 }
 
+// StartCluster will create the flota dir that all the daemons will register to
+// it will then wait until it all the daemons have been registered before
+// unblocking or it will timeout on its wait and return false.
+//
 // These should only be used by the flotilla client
-func (c *Client) StartCluster(numdaemons int, startsleep int) {
+func (c *Client) StartCluster(numdaemons int, startsleep int) bool {
 	t := time.Now()
 	value := t.Format(time.RFC3339)
 	resp, err := c.client.Create(rootDir+c.flota, string(value), defaultTTL)
@@ -47,19 +52,21 @@ func (c *Client) StartCluster(numdaemons int, startsleep int) {
 	wait := time.Duration(startsleep) * time.Second
 	select {
 	case <-time.After(time.Second * 1):
+		step++
 		count := c.ClusterCount()
+		log.Println("%d daemons have registered in %d seconds", step)
 		if count >= numdaemons {
-			return
+			return true
 		}
 		if step > startsleep {
-			return
+			return false
 		}
-		step++
 	case <-time.After(wait):
-		return
+		return false
 	default:
 	}
 
+	return false
 }
 
 // These should only be used by the flotilla client
