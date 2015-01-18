@@ -33,17 +33,48 @@ type Client struct {
 	stopList  map[string]chan bool
 }
 
+func (c *Client) getOrCreateRoot() error {
+	t := time.Now()
+	value := t.Format(time.RFC3339)
+
+	resp, err := c.client.Get(rootDir+c.flota, false, false)
+	if err != nil {
+		return nil
+	}
+
+	if resp == nil {
+		_, er := c.client.Create(rootDir+c.flota, string(value), defaultTTL)
+		if er != nil {
+			return nil
+		}
+	} else {
+		_, der := c.client.Delete(rootDir+c.flota, true)
+		if der != nil {
+			return der
+		}
+
+		_, cer := c.client.Create(rootDir+c.flota, string(value), defaultTTL)
+		if cer != nil {
+			return nil
+		}
+	}
+
+	return nil
+
+}
+
 // StartCluster will create the flota dir that all the daemons will register to
 // it will then wait until it all the daemons have been registered before
 // unblocking or it will timeout on its wait and return false.
 //
 // These should only be used by the flotilla client
-func (c *Client) StartCluster(numdaemons int, startsleep int) bool {
-	t := time.Now()
-	value := t.Format(time.RFC3339)
-	resp, err := c.client.Create(rootDir+c.flota, string(value), defaultTTL)
-	if resp == nil {
-		panic(ErrorUnableToStartCluster)
+func (c *Client) StartCluster(numdaemons int, startsleep int) (bool, error) {
+
+	log.Println("STARTSLEEP", startsleep)
+	err := c.getOrCreateRoot()
+	if err != nil {
+		c.StopCluster()
+		panic(err)
 	}
 	if err != nil {
 		panic(err)
@@ -52,24 +83,25 @@ func (c *Client) StartCluster(numdaemons int, startsleep int) bool {
 	// Wait for the cluster to spin up for the sleep time or return when
 	// the cluster is all up. It checks every second
 	step := 0
-	wait := time.Duration(startsleep) * time.Second
-	select {
-	case <-time.After(time.Second * 1):
+
+	for {
+
 		step++
 		count := c.ClusterCount()
-		log.Println("%d daemons have registered in %d seconds", step)
+		log.Printf("%d daemons have registered in %d seconds", count, step)
+
 		if count >= numdaemons {
-			return true
+			return true, nil
 		}
+
 		if step > startsleep {
-			return false
+			return false, errors.New("Daemons Not Registered")
 		}
-	case <-time.After(wait):
-		return false
-	default:
+
+		time.Sleep(time.Second * 1)
 	}
 
-	return false
+	return false, errors.New("Unable to start Cluter")
 }
 
 // These should only be used by the flotilla client
