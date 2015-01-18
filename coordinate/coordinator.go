@@ -70,7 +70,6 @@ func (c *Client) getOrCreateRoot() error {
 // These should only be used by the flotilla client
 func (c *Client) StartCluster(numdaemons int, startsleep int) (bool, error) {
 
-	log.Println("STARTSLEEP", startsleep)
 	err := c.getOrCreateRoot()
 	if err != nil {
 		c.StopCluster()
