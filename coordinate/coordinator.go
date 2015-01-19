@@ -34,29 +34,34 @@ type Client struct {
 }
 
 func (c *Client) getOrCreateRoot() error {
-	t := time.Now()
-	value := t.Format(time.RFC3339)
-
+	//	t := time.Now()
+	//	value := t.Format(time.RFC3339)
+	//
 	resp, err := c.client.Get(rootDir+c.flota, false, false)
 	if err != nil {
 		return nil
 	}
 
 	if resp == nil {
-		_, er := c.client.Create(rootDir+c.flota, string(value), defaultTTL)
+		_, er := c.client.CreateDir(rootDir+c.flota, defaultTTL)
 		if er != nil {
-			return nil
+			return er
 		}
+		log.Println("Create new run ", rootDir+c.flota)
+
 	} else {
+
 		_, der := c.client.Delete(rootDir+c.flota, true)
 		if der != nil {
 			return der
 		}
+		log.Println("Remove previous run ", rootDir+c.flota)
 
-		_, cer := c.client.Create(rootDir+c.flota, string(value), defaultTTL)
+		_, cer := c.client.CreateDir(rootDir+c.flota, defaultTTL)
 		if cer != nil {
-			return nil
+			return cer
 		}
+		log.Println("Create new run ", rootDir+c.flota)
 	}
 
 	return nil
@@ -80,7 +85,7 @@ func (c *Client) StartCluster(numdaemons int, startsleep int) (bool, error) {
 	}
 
 	// Wait for the cluster to spin up for the sleep time or return when
-	// the cluster is all up. It checks every second
+	// the cluster is all up. It checks every second.
 	step := 0
 
 	for {
@@ -94,7 +99,10 @@ func (c *Client) StartCluster(numdaemons int, startsleep int) (bool, error) {
 		}
 
 		if step > startsleep {
-			return false, errors.New("Daemons Not Registered")
+			for _, member := range c.ClusterMembers() {
+				log.Printf("Member %s had joined", member)
+			}
+			return false, errors.New("Daemons not all registered")
 		}
 
 		time.Sleep(time.Second * 1)
