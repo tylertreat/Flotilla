@@ -313,7 +313,13 @@ func (c *Client) collectResults() <-chan []*ResultContainer {
 // Teardown performs any necessary cleanup logic, including stopping the
 // broker and tearing down peers.
 func (c *Client) Teardown() {
-	fmt.Println("Tearing down peers")
+	fmt.Printf("Tearing down %d peers", len(c.peerd))
+	if len(c.peerd) == 0 {
+		fmt.Println("Stopping broker")
+		if err := c.stopBroker(); err != nil {
+			fmt.Printf("Failed to stop broker: %s\n", err.Error())
+		}
+	}
 	for _, peerd := range c.peerd {
 		_, err := sendRequest(peerd, request{Operation: teardown})
 		if err != nil {

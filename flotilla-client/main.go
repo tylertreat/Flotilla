@@ -65,11 +65,11 @@ func main() {
 	if coordinator != nil && *flota != "" && *numdaemons >= 0 {
 		log.Printf("Starting Cluster for %s and waiting for %d daemons", *flota, *numdaemons)
 		cclient := coordinate.NewSimpleCoordinator(*coordinator, *flota)
-		up := cclient.StartCluster(*numdaemons, int(*startupSleep))
+		up, err := cclient.StartCluster(*numdaemons, int(*startupSleep))
 		if up {
 			log.Println("Cluster Started")
 		} else {
-			log.Println("Cluster did not start")
+			log.Println("Cluster did not start", err.Error())
 			os.Exit(1)
 		}
 		peers = append(peers, cclient.ClusterMembers()...)
