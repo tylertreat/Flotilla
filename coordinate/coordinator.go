@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -25,12 +26,13 @@ const (
 type WatchFunc func(*etcd.Response)
 
 type Client struct {
-	client    *etcd.Client
-	flota     string
-	id        string
-	watchLock sync.Mutex
-	watchList map[string]WatchFunc
-	stopList  map[string]chan bool
+	client     *etcd.Client
+	flota      string
+	id         string
+	watchLock  sync.Mutex
+	watchList  map[string]WatchFunc
+	stopList   map[string]chan bool
+	Registered bool
 }
 
 func (c *Client) getOrCreateRoot() error {
@@ -161,7 +163,7 @@ func (c *Client) ClusterMembers() []string {
 // Register will add to the path under the rootdir and flota so its IP address
 // can be pulled down.
 // TODO: Expand this to cover ports and maybe a way to pick a single address
-func (c *Client) Register(port string) error {
+func (c *Client) Register(port int) error {
 
 	// This is to ensure the client started and the test should actually be run
 	resp, cerr := c.client.Get(rootDir+c.flota, false, false)
@@ -176,6 +178,9 @@ func (c *Client) Register(port string) error {
 		return iperr
 	}
 	_, err := c.client.Set(rootDir+c.flota+"/"+c.id, strings.Join(addresses, ","), defaultTTL)
+	if err == nil {
+		c.Registered = true
+	}
 	return err
 }
 
@@ -254,8 +259,9 @@ func NewSimpleCoordinator(address, flota string) *Client {
 	return &Client{client: client, flota: flota, watchList: watchList, stopList: stopList}
 }
 
-func getIPs(port string) ([]string, error) {
+func getIPs(port int) ([]string, error) {
 
+	p := strconv.Itoa(port)
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		return nil, err
@@ -265,7 +271,7 @@ func getIPs(port string) ([]string, error) {
 	for _, a := range addrs {
 		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 			if ipnet.IP.To4() != nil {
-				results = append(results, ipnet.IP.String())
+				results = append(results, ipnet.IP.String()+":"+p)
 			}
 		}
 	}
