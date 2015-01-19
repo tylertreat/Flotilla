@@ -38,15 +38,18 @@ func main() {
 	// TODO: Modify this so that we can do TLS connections if we have the right
 	// information
 	var client coordinate.Client
-	if coordinator && flota {
-		client := coordinator.NewSimpleCoordniator(*coordinator, *flota)
-		client.Register(*port)
+	if coordinator != nil && flota != nil {
+		client := coordinate.NewSimpleCoordinator(*coordinator, *flota)
+		err := client.Register(*port)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	fmt.Printf("Flotilla daemon started on port %d...\n", *port)
 	if err := d.Start(*port); err != nil {
 		// We have to try to unregister ourselves if we can
-		if client != nil {
+		if client.Registered {
 			client.Unregister()
 		}
 		panic(err)
