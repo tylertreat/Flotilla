@@ -37,6 +37,7 @@ func main() {
 	// are up and running ok.
 	// TODO: Modify this so that we can do TLS connections if we have the right
 	// information
+	// TODO: Consider go func () ... the actual registration
 	var client coordinate.Client
 	if coordinator != nil && flota != nil {
 		client := coordinate.NewSimpleCoordinator(*coordinator, *flota)
