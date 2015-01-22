@@ -35,10 +35,9 @@ type Client struct {
 	Registered bool
 }
 
+// getOrCreateRoot will delete the root + flota and its children if they do exist
 func (c *Client) getOrCreateRoot() error {
-	//	t := time.Now()
-	//	value := t.Format(time.RFC3339)
-	//
+
 	resp, err := c.client.Get(rootDir+c.flota, false, false)
 	if err != nil {
 		return nil
@@ -70,9 +69,10 @@ func (c *Client) getOrCreateRoot() error {
 
 }
 
-// StartCluster will create the flota dir that all the daemons will register to
-// it will then wait until it all the daemons have been registered before
-// unblocking or it will timeout on its wait and return false.
+// StartCluster will
+// 1. create the flota dir that all the daemons will register to.
+// 2. wait until it all the daemons have been registered
+// 3. will timeout on its wait and return false or return true if all found
 //
 // These should only be used by the flotilla client
 func (c *Client) StartCluster(numdaemons int, startsleep int) (bool, error) {
@@ -122,6 +122,8 @@ func (c *Client) StopCluster() {
 	}
 }
 
+// ClusterCount will get against the rootdir + the flota and count how many nodes
+// it finds.
 func (c *Client) ClusterCount() int {
 
 	// starting at the root flota node we need to go through all the registered nodes
@@ -138,7 +140,7 @@ func (c *Client) ClusterCount() int {
 	return 0
 }
 
-// This will concatanate all deamon's who have registered IP addresses into
+// ClusterMembers will concatanate all deamon's who have registered IP addresses into
 // a []string of IP addresses
 func (c *Client) ClusterMembers() []string {
 
@@ -244,6 +246,10 @@ func (c *Client) Close() {
 // NewSimpleCoordinator returns a Client for the Client and Daemon to use to
 // register themselves with etcd. Address should the http addressable address
 // of where the etcd server is running
+//
+// Note: flota should be 'unique' as the cluster creation process will remove
+// any existing nodes and their children to ensure the test run starts with a
+// clean slate.
 func NewSimpleCoordinator(address, flota string) *Client {
 
 	client := etcd.NewClient([]string{address})
