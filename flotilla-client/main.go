@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/tylertreat/Flotilla/coordinate"
 	"github.com/tylertreat/Flotilla/flotilla-client/broker"
 )
 
@@ -22,6 +24,7 @@ const (
 	defaultNumProducers = 1
 	defaultNumConsumers = 1
 	defaultStartupSleep = 8
+	defaultNumDaemon    = 0
 	defaultHost         = "localhost"
 	defaultDaemonHost   = defaultHost + ":" + defaultDaemonPort
 )
@@ -49,10 +52,31 @@ func main() {
 		numMessages  = flag.Uint("num-messages", defaultNumMessages, "number of messages to send from each producer")
 		messageSize  = flag.Uint64("message-size", defaultMessageSize, "size of each message in bytes")
 		startupSleep = flag.Uint("startup-sleep", defaultStartupSleep, "seconds to wait after broker start before benchmarking")
+		coordinator  = flag.String("coordinator", "", "http ip & port address for etcd")
+		flota        = flag.String("flota", "", "test group the deamon is part of")
+		numdaemons   = flag.Int("num-daemons", defaultNumDaemon, "The number of daemons the coordinator should wait for before starting")
 	)
 	flag.Parse()
 
 	peers := strings.Split(*peerHosts, ",")
+
+	// If we are to use etcd then start the cluster coordination
+	var cclient coordinate.Client
+	if coordinator != nil && *flota != "" && *numdaemons >= 0 {
+		log.Printf("Starting Cluster for %s and waiting for %d daemons", *flota, *numdaemons)
+		cclient := coordinate.NewSimpleCoordinator(*coordinator, *flota)
+		up, err := cclient.StartCluster(*numdaemons, int(*startupSleep))
+		if up {
+			log.Println("Cluster Started")
+		} else {
+			log.Println("Cluster did not start")
+			if err != nil {
+				log.Println("Cluster start up error was ", err.Error())
+			}
+			os.Exit(1)
+		}
+		peers = append(peers, cclient.ClusterMembers()...)
+	}
 
 	client, err := broker.NewClient(&broker.Benchmark{
 		BrokerdHost:  *brokerdHost,
@@ -67,6 +91,7 @@ func main() {
 		StartupSleep: *startupSleep,
 	})
 	if err != nil {
+		cclient.StopCluster()
 		fmt.Println("Failed to connect to flotilla:", err)
 		os.Exit(1)
 	}
