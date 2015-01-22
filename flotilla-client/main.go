@@ -69,7 +69,10 @@ func main() {
 		if up {
 			log.Println("Cluster Started")
 		} else {
-			log.Println("Cluster did not start", err.Error())
+			log.Println("Cluster did not start")
+			if err != nil {
+				log.Println("Cluster start up error was ", err.Error())
+			}
 			os.Exit(1)
 		}
 		peers = append(peers, cclient.ClusterMembers()...)
