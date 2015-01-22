@@ -13,8 +13,13 @@ import (
 	"github.com/tylertreat/Flotilla/flotilla-server/daemon/broker"
 )
 
+// ErrorUnableToConnect - Was not able to connect to the etcd instance
 var ErrorUnableToConnect = errors.New("Unable to Connect to etcd")
+
+// ErrorUnableToStartCluster - can't start the cluster
 var ErrorUnableToStartCluster = errors.New("Unable to start cluster")
+
+// ErrorUnableToStopCluster - can't stop the cluster
 var ErrorUnableToStopCluster = errors.New("Unable to stop cluster")
 
 const (
@@ -23,8 +28,14 @@ const (
 	defaultTTL = 1200
 )
 
+// WatchFunc is a type that is used to handle responses from watches that are
+// created against etcd
 type WatchFunc func(*etcd.Response)
 
+// Client wraps the go-etcd package and its interactions with etcd into simple
+// operations that the flotilla-client and flotilla-server can use to spin up a
+// test cluster. the flotilla-client manages the cluster and watches for
+// for flotilla-server instances to join the flota specific cluster.
 type Client struct {
 	client     *etcd.Client
 	flota      string
@@ -113,7 +124,8 @@ func (c *Client) StartCluster(numdaemons int, startsleep int) (bool, error) {
 	return false, errors.New("Unable to start Cluter")
 }
 
-// These should only be used by the flotilla client
+// StopCluster will close all watcher go routines and do a recursive delete on
+// rootDir + flota. This should only be used by the flotilla client
 func (c *Client) StopCluster() {
 	c.Close()
 	resp, err := c.client.Delete(rootDir+c.flota, false)
@@ -265,6 +277,10 @@ func NewSimpleCoordinator(address, flota string) *Client {
 	return &Client{client: client, flota: flota, watchList: watchList, stopList: stopList}
 }
 
+// getIPs will get *ALL* IP addresses that are not Loopback ones, so there is a
+// potential issue if a daemon has more than one IP address, both will be registered
+// with the cluster.
+// TODO: Augment server to be able to set IP to be used for registration
 func getIPs(port int) ([]string, error) {
 
 	p := strconv.Itoa(port)
