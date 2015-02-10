@@ -15,16 +15,17 @@ type operation string
 type daemon string
 
 const (
-	minNumMessages           = 100
-	minMessageSize           = 9
-	start          operation = "start"
-	stop           operation = "stop"
-	sub            operation = "subscribers"
-	pub            operation = "publishers"
-	run            operation = "run"
-	results        operation = "results"
-	teardown       operation = "teardown"
-	resultsSleep             = time.Second
+	minNumMessages             = 100
+	minMessageSize             = 9
+	start            operation = "start"
+	stop             operation = "stop"
+	sub              operation = "subscribers"
+	pub              operation = "publishers"
+	run              operation = "run"
+	results          operation = "results"
+	teardown         operation = "teardown"
+	resultsSleep               = time.Second
+	sendRecvDeadline           = 5 * time.Second
 )
 
 type request struct {
@@ -146,7 +147,8 @@ func NewClient(b *Benchmark) (*Client, error) {
 	}
 
 	brokerd.AddTransport(tcp.NewTransport())
-	// TODO: Set send/recv timeout.
+	brokerd.SetOption(mangos.OptionSendDeadline, sendRecvDeadline)
+	brokerd.SetOption(mangos.OptionRecvDeadline, sendRecvDeadline)
 
 	if err := brokerd.Dial(fmt.Sprintf("tcp://%s", b.BrokerdHost)); err != nil {
 		return nil, err
@@ -160,7 +162,8 @@ func NewClient(b *Benchmark) (*Client, error) {
 		}
 
 		s.AddTransport(tcp.NewTransport())
-		// TODO: Set send/recv timeout.
+		s.SetOption(mangos.OptionSendDeadline, sendRecvDeadline)
+		s.SetOption(mangos.OptionRecvDeadline, sendRecvDeadline)
 
 		if err := s.Dial(fmt.Sprintf("tcp://%s", peer)); err != nil {
 			return nil, err
