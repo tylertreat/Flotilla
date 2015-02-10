@@ -298,7 +298,10 @@ func (c *Client) collectResults() <-chan []*ResultContainer {
 
 		for {
 			select {
-			case subResult := <-subResults:
+			case subResult, ok := <-subResults:
+				if !ok {
+					return
+				}
 				results = append(results, subResult)
 				complete++
 			}
@@ -372,7 +375,8 @@ func collectResultsFromPeer(host string, peerd mangos.Socket, subResults chan *R
 		resp, err := sendRequest(peerd, request{Operation: results})
 		if err != nil {
 			fmt.Println("Failed to collect results from peer:", err.Error())
-			subResults <- nil
+			close(subResults)
+			return
 		}
 
 		if !resp.Success {
