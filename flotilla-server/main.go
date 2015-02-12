@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"runtime"
 
 	"github.com/tylertreat/Flotilla/flotilla-server/daemon"
 )
@@ -18,6 +19,7 @@ func main() {
 			"Google Cloud project JSON key file (needed for Cloud Pub/Sub)")
 	)
 	flag.Parse()
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	config := &daemon.Config{
 		GoogleCloudProjectID: *gCloudProjectID,
