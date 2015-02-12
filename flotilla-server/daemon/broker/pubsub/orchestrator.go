@@ -82,7 +82,7 @@ func newContext(projectID, jsonKey string) (context.Context, error) {
 
 	conf, err := google.JWTConfigFromJSON(
 		nil,
-		key,
+		string(key),
 		pubsub.ScopeCloudPlatform,
 		pubsub.ScopePubSub,
 	)
