@@ -48,16 +48,17 @@ type response struct {
 
 // Benchmark contains configuration settings for broker tests.
 type Benchmark struct {
-	BrokerdHost  string
-	BrokerName   string
-	BrokerHost   string
-	BrokerPort   string
-	PeerHosts    []string
-	NumMessages  uint
-	MessageSize  uint64
-	Publishers   uint
-	Subscribers  uint
-	StartupSleep uint
+	BrokerdHost   string
+	BrokerName    string
+	BrokerHost    string
+	BrokerPort    string
+	PeerHosts     []string
+	NumMessages   uint
+	MessageSize   uint64
+	Publishers    uint
+	Subscribers   uint
+	StartupSleep  uint
+	DaemonTimeout uint
 }
 
 func (b *Benchmark) validate() error {
@@ -147,8 +148,8 @@ func NewClient(b *Benchmark) (*Client, error) {
 	}
 
 	brokerd.AddTransport(tcp.NewTransport())
-	brokerd.SetOption(mangos.OptionSendDeadline, sendRecvDeadline)
-	brokerd.SetOption(mangos.OptionRecvDeadline, sendRecvDeadline)
+	brokerd.SetOption(mangos.OptionSendDeadline, time.Duration(b.DaemonTimeout)*time.Second)
+	brokerd.SetOption(mangos.OptionRecvDeadline, time.Duration(b.DaemonTimeout)*time.Second)
 
 	if err := brokerd.Dial(fmt.Sprintf("tcp://%s", b.BrokerdHost)); err != nil {
 		return nil, err
@@ -162,8 +163,8 @@ func NewClient(b *Benchmark) (*Client, error) {
 		}
 
 		s.AddTransport(tcp.NewTransport())
-		s.SetOption(mangos.OptionSendDeadline, sendRecvDeadline)
-		s.SetOption(mangos.OptionRecvDeadline, sendRecvDeadline)
+		s.SetOption(mangos.OptionSendDeadline, time.Duration(b.DaemonTimeout)*time.Second)
+		s.SetOption(mangos.OptionRecvDeadline, time.Duration(b.DaemonTimeout)*time.Second)
 
 		if err := s.Dial(fmt.Sprintf("tcp://%s", peer)); err != nil {
 			return nil, err

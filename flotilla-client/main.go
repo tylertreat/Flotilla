@@ -15,15 +15,16 @@ import (
 )
 
 const (
-	defaultDaemonPort   = "9500"
-	defaultBrokerPort   = "5000"
-	defaultNumMessages  = 500000
-	defaultMessageSize  = 1000
-	defaultNumProducers = 1
-	defaultNumConsumers = 1
-	defaultStartupSleep = 8
-	defaultHost         = "localhost"
-	defaultDaemonHost   = defaultHost + ":" + defaultDaemonPort
+	defaultDaemonPort    = "9500"
+	defaultBrokerPort    = "5000"
+	defaultNumMessages   = 500000
+	defaultMessageSize   = 1000
+	defaultNumProducers  = 1
+	defaultNumConsumers  = 1
+	defaultStartupSleep  = 8
+	defaultDaemonTimeout = 5
+	defaultHost          = "localhost"
+	defaultDaemonHost    = defaultHost + ":" + defaultDaemonPort
 )
 
 var brokers = []string{
@@ -39,32 +40,34 @@ var brokers = []string{
 
 func main() {
 	var (
-		brokerName   = flag.String("broker", brokers[0], brokerList())
-		brokerPort   = flag.String("broker-port", defaultBrokerPort, "host machine broker port")
-		dockerHost   = flag.String("docker-host", defaultHost, "host machine (or VM) running Docker")
-		brokerdHost  = flag.String("host", defaultDaemonHost, "machine running broker daemon")
-		peerHosts    = flag.String("peer-hosts", defaultDaemonHost, "comma-separated list of machines to run peers")
-		producers    = flag.Uint("producers", defaultNumProducers, "number of producers per host")
-		consumers    = flag.Uint("consumers", defaultNumConsumers, "number of consumers per host")
-		numMessages  = flag.Uint("num-messages", defaultNumMessages, "number of messages to send from each producer")
-		messageSize  = flag.Uint64("message-size", defaultMessageSize, "size of each message in bytes")
-		startupSleep = flag.Uint("startup-sleep", defaultStartupSleep, "seconds to wait after broker start before benchmarking")
+		brokerName    = flag.String("broker", brokers[0], brokerList())
+		brokerPort    = flag.String("broker-port", defaultBrokerPort, "host machine broker port")
+		dockerHost    = flag.String("docker-host", defaultHost, "host machine (or VM) running Docker")
+		brokerdHost   = flag.String("host", defaultDaemonHost, "machine running broker daemon")
+		peerHosts     = flag.String("peer-hosts", defaultDaemonHost, "comma-separated list of machines to run peers")
+		producers     = flag.Uint("producers", defaultNumProducers, "number of producers per host")
+		consumers     = flag.Uint("consumers", defaultNumConsumers, "number of consumers per host")
+		numMessages   = flag.Uint("num-messages", defaultNumMessages, "number of messages to send from each producer")
+		messageSize   = flag.Uint64("message-size", defaultMessageSize, "size of each message in bytes")
+		startupSleep  = flag.Uint("startup-sleep", defaultStartupSleep, "seconds to wait after broker start before benchmarking")
+		daemonTimeout = flag.Uint("daemon-timeout", defaultDaemonTimeout, "seconds to wait for daemon before timing out")
 	)
 	flag.Parse()
 
 	peers := strings.Split(*peerHosts, ",")
 
 	client, err := broker.NewClient(&broker.Benchmark{
-		BrokerdHost:  *brokerdHost,
-		BrokerName:   *brokerName,
-		BrokerHost:   *dockerHost,
-		BrokerPort:   *brokerPort,
-		PeerHosts:    peers,
-		NumMessages:  *numMessages,
-		MessageSize:  *messageSize,
-		Publishers:   *producers,
-		Subscribers:  *consumers,
-		StartupSleep: *startupSleep,
+		BrokerdHost:   *brokerdHost,
+		BrokerName:    *brokerName,
+		BrokerHost:    *dockerHost,
+		BrokerPort:    *brokerPort,
+		PeerHosts:     peers,
+		NumMessages:   *numMessages,
+		MessageSize:   *messageSize,
+		Publishers:    *producers,
+		Subscribers:   *consumers,
+		StartupSleep:  *startupSleep,
+		DaemonTimeout: *daemonTimeout,
 	})
 	if err != nil {
 		fmt.Println("Failed to connect to flotilla:", err)
