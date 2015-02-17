@@ -121,10 +121,16 @@ func printSummary(benchmark *broker.Benchmark, elapsed time.Duration) {
 }
 
 func printResults(results []*broker.ResultContainer) {
-	producerData := [][]string{}
-	i := 1
+	var (
+		producerData   = [][]string{}
+		pubDurations   = float32(0)
+		pubThroughputs = float32(0)
+		i              = 1
+	)
 	for _, peerResults := range results {
 		for _, result := range peerResults.PublisherResults {
+			pubDurations += result.Duration
+			pubThroughputs += result.Throughput
 			producerData = append(producerData, []string{
 				strconv.Itoa(i),
 				peerResults.Peer,
@@ -135,6 +141,15 @@ func printResults(results []*broker.ResultContainer) {
 			i++
 		}
 	}
+	avgPubDuration := pubDurations / (float32(i) - 1)
+	avgPubThroughput := pubThroughputs / (float32(i) - 1)
+	producerData = append(producerData, []string{
+		"AVG",
+		"",
+		"",
+		strconv.FormatFloat(float64(avgPubDuration), 'f', 3, 32),
+		strconv.FormatFloat(float64(avgPubThroughput), 'f', 3, 32),
+	})
 	printTable([]string{
 		"Producer",
 		"Node",
@@ -145,8 +160,30 @@ func printResults(results []*broker.ResultContainer) {
 
 	consumerData := [][]string{}
 	i = 1
+	var (
+		subDurations   = float32(0)
+		subThroughputs = float32(0)
+		subMins        = int64(0)
+		subQ1s         = int64(0)
+		subQ2s         = int64(0)
+		subQ3s         = int64(0)
+		subMaxes       = int64(0)
+		subMeans       = float64(0)
+		subIQRs        = int64(0)
+		subStdDevs     = float64(0)
+	)
 	for _, peerResults := range results {
 		for _, result := range peerResults.SubscriberResults {
+			subDurations += result.Duration
+			subThroughputs += result.Throughput
+			subMins += result.Latency.Min
+			subQ1s += result.Latency.Q1
+			subQ2s += result.Latency.Q2
+			subQ3s += result.Latency.Q3
+			subMaxes += result.Latency.Max
+			subMeans += result.Latency.Mean
+			subIQRs += result.Latency.Q3 - result.Latency.Q1
+			subStdDevs += result.Latency.StdDev
 			consumerData = append(consumerData, []string{
 				strconv.Itoa(i),
 				peerResults.Peer,
@@ -165,6 +202,33 @@ func printResults(results []*broker.ResultContainer) {
 			i++
 		}
 	}
+	var (
+		avgSubDuration   = subDurations / (float32(i) - 1)
+		avgSubThroughput = subThroughputs / (float32(i) - 1)
+		avgSubMin        = subMins / (int64(i) - 1)
+		avgSubQ1         = subQ1s / (int64(i) - 1)
+		avgSubQ2         = subQ2s / (int64(i) - 1)
+		avgSubQ3         = subQ3s / (int64(i) - 1)
+		avgSubMaxes      = subMaxes / (int64(i) - 1)
+		avgSubMeans      = subMeans / (float64(i) - 1)
+		avgSubIQRs       = subIQRs / (int64(i) - 1)
+		avgSubStdDevs    = subStdDevs / (float64(i) - 1)
+	)
+	consumerData = append(consumerData, []string{
+		"AVG",
+		"",
+		"",
+		strconv.FormatFloat(float64(avgSubDuration), 'f', 3, 32),
+		strconv.FormatFloat(float64(avgSubThroughput), 'f', 3, 32),
+		strconv.FormatFloat(float64(avgSubMin), 'f', 3, 32),
+		strconv.FormatFloat(float64(avgSubQ1), 'f', 3, 32),
+		strconv.FormatFloat(float64(avgSubQ2), 'f', 3, 32),
+		strconv.FormatFloat(float64(avgSubQ3), 'f', 3, 32),
+		strconv.FormatFloat(float64(avgSubMaxes), 'f', 3, 32),
+		strconv.FormatFloat(float64(avgSubMeans), 'f', 3, 32),
+		strconv.FormatFloat(float64(avgSubIQRs), 'f', 3, 32),
+		strconv.FormatFloat(float64(avgSubStdDevs), 'f', 3, 32),
+	})
 	printTable([]string{
 		"Consumer",
 		"Node",
