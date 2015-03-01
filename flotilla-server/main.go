@@ -39,7 +39,7 @@ func main() {
 	// information
 	// TODO: Consider go func () ... the actual registration
 	var client coordinate.Client
-	if coordinator != nil && flota != nil {
+	if *coordinator != "" && *flota != "" {
 		client := coordinate.NewSimpleCoordinator(*coordinator, *flota)
 		err := client.Register(*port)
 		if err != nil {
