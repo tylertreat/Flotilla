@@ -16,6 +16,9 @@ import (
 // ErrorUnableToConnect - Was not able to connect to the etcd instance
 var ErrorUnableToConnect = errors.New("Unable to Connect to etcd")
 
+// ErrorUnableToRegister
+var ErrorUnableToRegister = errors.New("Unable to Register with etcd")
+
 // ErrorUnableToStartCluster - can't start the cluster
 var ErrorUnableToStartCluster = errors.New("Unable to start cluster")
 
@@ -46,38 +49,32 @@ type Client struct {
 	Registered bool
 }
 
-// getOrCreateRoot will delete the root + flota and its children if they do exist
-func (c *Client) getOrCreateRoot() error {
+func (c *Client) dir() string {
+	return rootDir + c.flota
+}
 
-	resp, err := c.client.Get(rootDir+c.flota, false, false)
+// getOrCreateRoot will delete the root + flota and its children if they do exist
+func (c *Client) createOrResetRoot() error {
+
+	resp, err := c.client.Get(c.dir(), false, false)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	if resp == nil {
-		_, er := c.client.CreateDir(rootDir+c.flota, defaultTTL)
-		if er != nil {
-			return er
-		}
-		log.Println("Create new run ", rootDir+c.flota)
-
-	} else {
-
-		_, der := c.client.Delete(rootDir+c.flota, true)
+	if resp != nil {
+		_, der := c.client.Delete(c.dir(), true)
 		if der != nil {
 			return der
 		}
-		log.Println("Remove previous run ", rootDir+c.flota)
-
-		_, cer := c.client.CreateDir(rootDir+c.flota, defaultTTL)
-		if cer != nil {
-			return cer
-		}
-		log.Println("Create new run ", rootDir+c.flota)
+		log.Println("Remove previous run ", c.dir())
 	}
+	_, er := c.client.CreateDir(c.dir(), defaultTTL)
+	if er != nil {
+		return er
+	}
+	log.Println("Create new run ", c.dir())
 
 	return nil
-
 }
 
 // StartCluster will
@@ -88,15 +85,10 @@ func (c *Client) getOrCreateRoot() error {
 // These should only be used by the flotilla client
 func (c *Client) StartCluster(numdaemons int, startsleep int) (bool, error) {
 
-	err := c.getOrCreateRoot()
+	err := c.createOrResetRoot()
 	if err != nil {
-		c.StopCluster()
-		panic(err)
+		return false, err
 	}
-	if err != nil {
-		panic(err)
-	}
-
 	// Wait for the cluster to spin up for the sleep time or return when
 	// the cluster is all up. It checks every second.
 	step := 0
@@ -121,17 +113,7 @@ func (c *Client) StartCluster(numdaemons int, startsleep int) (bool, error) {
 		time.Sleep(time.Second * 1)
 	}
 
-	return false, errors.New("Unable to start Cluter")
-}
-
-// StopCluster will close all watcher go routines and do a recursive delete on
-// rootDir + flota. This should only be used by the flotilla client
-func (c *Client) StopCluster() {
-	c.Close()
-	resp, err := c.client.Delete(rootDir+c.flota, false)
-	if resp == nil || err != nil {
-		panic(ErrorUnableToStopCluster)
-	}
+	return false, errors.New("Unable to start Cluster")
 }
 
 // ClusterCount will get against the rootdir + the flota and count how many nodes
@@ -140,7 +122,7 @@ func (c *Client) ClusterCount() int {
 
 	// starting at the root flota node we need to go through all the registered nodes
 	// and pull out their ip address values (which are a comma seperated list)
-	resp, err := c.client.Get(rootDir+c.flota, false, false)
+	resp, err := c.client.Get(c.dir(), false, false)
 
 	if err != nil {
 		return 0
@@ -160,7 +142,7 @@ func (c *Client) ClusterMembers() []string {
 
 	// starting at the root flota node we need to go through all the registered nodes
 	// and pull out their ip address values (which are a comma seperated list)
-	resp, err := c.client.Get(rootDir+c.flota, false, false)
+	resp, err := c.client.Get(c.dir(), false, false)
 
 	if err != nil {
 		return nil
@@ -180,9 +162,12 @@ func (c *Client) ClusterMembers() []string {
 func (c *Client) Register(port int) error {
 
 	// This is to ensure the client started and the test should actually be run
-	resp, cerr := c.client.Get(rootDir+c.flota, false, false)
-	if resp == nil || cerr != nil {
+	resp, cerr := c.client.Get(c.dir(), false, false)
+	if cerr != nil {
 		return cerr
+	}
+	if resp == nil {
+		return ErrorUnableToRegister
 	}
 
 	c.id = broker.GenerateName()
@@ -191,7 +176,7 @@ func (c *Client) Register(port int) error {
 	if iperr != nil {
 		return iperr
 	}
-	_, err := c.client.Set(rootDir+c.flota+"/"+c.id, strings.Join(addresses, ","), defaultTTL)
+	_, err := c.client.Set(c.dir()+"/"+c.id, strings.Join(addresses, ","), defaultTTL)
 	if err == nil {
 		c.Registered = true
 	}
@@ -201,13 +186,13 @@ func (c *Client) Register(port int) error {
 // Unregister will remove the path to the given client
 func (c *Client) Unregister() error {
 	c.Close()
-	_, err := c.client.Delete(rootDir+c.flota+c.id, false)
+	_, err := c.client.Delete(c.dir()+"/"+c.id, false)
 	return err
 }
 
 // GetConfig is to be used later for shared configuration
 func (c *Client) GetConfig() string {
-	resp, err := c.client.Get(rootDir+c.flota+config, false, false)
+	resp, err := c.client.Get(c.dir()+config, false, false)
 
 	if resp == nil || err != nil {
 		return ""
