@@ -248,19 +248,19 @@ func (c *Client) Close() {
 // Note: flota should be 'unique' as the cluster creation process will remove
 // any existing nodes and their children to ensure the test run starts with a
 // clean slate.
-func NewSimpleCoordinator(address, flota string) *Client {
+func NewSimpleCoordinator(address, flota string) (*Client, error) {
 
 	client := etcd.NewClient([]string{address})
 
 	// Panic if we cannot connect to the coordination service, the daemon will
 	// not be able to participate in the test run.
 	if client == nil {
-		panic(ErrorUnableToConnect)
+		return nil, ErrorUnableToConnect
 	}
 	watchList := make(map[string]WatchFunc, 0)
 	stopList := make(map[string]chan bool, 0)
 
-	return &Client{client: client, flota: flota, watchList: watchList, stopList: stopList}
+	return &Client{client: client, flota: flota, watchList: watchList, stopList: stopList}, nil
 }
 
 // getIPs will get *ALL* IP addresses that are not Loopback ones, so there is a
