@@ -210,17 +210,18 @@ func (c *Client) Watch(prefix string, alert WatchFunc) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
+		for {
+			stopChan := make(chan bool)
+			go c.client.Watch(prefix, 0, false, watchChan, stopChan)
+			wg.Done()
+			select {
 
-		stopChan := make(chan bool)
-		go c.client.Watch(prefix, 0, false, watchChan, stopChan)
-		wg.Done()
-		select {
-
-		case response := <-watchChan:
-			go alert(response)
-		case stop := <-stopWatch:
-			stopChan <- stop
-			return
+			case response := <-watchChan:
+				go alert(response)
+			case stop := <-stopWatch:
+				stopChan <- stop
+				return
+			}
 		}
 	}()
 
