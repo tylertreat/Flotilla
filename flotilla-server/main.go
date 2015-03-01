@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 
 	"github.com/tylertreat/Flotilla/coordinate"
 	"github.com/tylertreat/Flotilla/flotilla-server/daemon"
@@ -40,10 +41,17 @@ func main() {
 	// TODO: Consider go func () ... the actual registration
 	var client coordinate.Client
 	if *coordinator != "" && *flota != "" {
-		client := coordinate.NewSimpleCoordinator(*coordinator, *flota)
-		err := client.Register(*port)
+		client, err := coordinate.NewSimpleCoordinator(*coordinator, *flota)
 		if err != nil {
 			panic(err)
+		}
+		if client == nil {
+			log.Printf("Unable to connect to coordination service. Not registering")
+		} else {
+			rerr := client.Register(*port)
+			if rerr != nil {
+				panic(err)
+			}
 		}
 	}
 
