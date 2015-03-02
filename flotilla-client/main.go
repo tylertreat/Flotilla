@@ -61,7 +61,6 @@ func main() {
 	peers := strings.Split(*peerHosts, ",")
 
 	// If we are to use etcd then start the cluster coordination
-	var cclient coordinate.Client
 	if *coordinator != "" && *flota != "" && *numdaemons >= 0 {
 		log.Printf("Starting Cluster for %s and waiting for %d daemons", *flota, *numdaemons)
 		cclient, err := coordinate.NewSimpleCoordinator(*coordinator, *flota)
@@ -91,7 +90,6 @@ func main() {
 		StartupSleep: *startupSleep,
 	})
 	if err != nil {
-		cclient.StopCluster()
 		fmt.Println("Failed to connect to flotilla:", err)
 		os.Exit(1)
 	}
