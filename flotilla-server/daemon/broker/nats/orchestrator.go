@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	gnatsd       = "apcera/gnatsd"
+	gnatsd       = "nats"
 	internalPort = "4222"
 )
 
