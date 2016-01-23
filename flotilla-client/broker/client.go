@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gdamore/mangos"
-	"github.com/gdamore/mangos/protocol/req"
-	"github.com/gdamore/mangos/transport/tcp"
+	"github.com/go-mangos/mangos"
+	"github.com/go-mangos/mangos/protocol/req"
+	"github.com/go-mangos/mangos/transport/tcp"
 )
 
 type operation string
